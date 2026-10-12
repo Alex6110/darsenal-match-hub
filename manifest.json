@@ -1,0 +1,15 @@
+{
+  "name": "Darsenal - Match Hub",
+  "short_name": "Darsenal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#800020",
+  "icons": [
+    {
+      "src": "logo.jpeg",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
