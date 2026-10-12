@@ -282,7 +282,7 @@ async function caricaMessaggi() {
             ${btnElimina}
           </div>
         </div>
-        <div class="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed mb-3">${msg.testo}</div>
+        <div class="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed mb-3 select-text">${msg.testo}</div>
         
         <!-- Reazioni ed emoji -->
         <div class="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
