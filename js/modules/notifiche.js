@@ -159,7 +159,7 @@ async function registraPushNotifications() {
   if (!currentUser) return;
 
   try {
-    // 1. Registra il Service Worker creato nella root
+    // 1. Registra il Service Worker
     const reg = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
 
@@ -167,23 +167,26 @@ async function registraPushNotifications() {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
 
-    // 3. Ottieni o crea la sottoscrizione push del browser
+    // 3. FORZA LA CANCELLAZIONE della vecchia sottoscrizione in cache (Risolve BadVapidPublicKey)
     let subscription = await reg.pushManager.getSubscription();
-    if (!subscription) {
-      const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: convertedKey
-      });
+    if (subscription) {
+      await subscription.unsubscribe();
     }
 
-    // 4. Salva la subscription nel database Supabase legandola all'utente loggato
+    // 4. Crea una NUOVA sottoscrizione pulita con la chiave VAPID corrente
+    const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+    subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: convertedKey
+    });
+
+    // 5. Salva la nuova subscription nel database Supabase
     await db.from('push_subscriptions').upsert({
       nome_utente: currentUser,
       subscription: subscription.toJSON()
     }, { onConflict: 'nome_utente' });
 
-    console.log("Dispositivo registrato con successo per le push notifications.");
+    console.log("Dispositivo registrato con successo e chiave aggiornata.");
   } catch (err) {
     console.warn("Errore durante la registrazione push:", err);
   }
