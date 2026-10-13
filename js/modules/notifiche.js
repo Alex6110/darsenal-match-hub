@@ -138,9 +138,65 @@ function avviaAscoltatoriRealtime() {
 
 // Richiedi i permessi al primo login o caricamento
 document.addEventListener('DOMContentLoaded', () => {
-  richiediPermessoNotifiche();
   setTimeout(() => {
+    richiediPermessoNotifiche();
+    registraPushNotifications(); 
     avviaAscoltatoriRealtime();
     aggiornaAppBadgeTotale();
   }, 1500);
 });
+
+
+// -------------------------------------------------------------
+// CONFIGURAZIONE WEB PUSH (APP CHIUSA)
+// -------------------------------------------------------------
+
+// INCOLLA QUI LA TUA PUBLIC KEY VAPID GENERATA AL PASSO 1
+const VAPID_PUBLIC_KEY = 'BEimz9m6sBNtgKwPpxcCPoo-54f0yu7yl-9laUa14le5Hbpcwk8SP409LuMj5K0V4Uub6UwANYhkHwTL3VlrlbQ';
+
+async function registraPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!currentUser) return;
+
+  try {
+    // 1. Registra il Service Worker creato nella root
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    await navigator.serviceWorker.ready;
+
+    // 2. Chiedi il permesso per le notifiche se non è già stato fatto
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') return;
+
+    // 3. Ottieni o crea la sottoscrizione push del browser
+    let subscription = await reg.pushManager.getSubscription();
+    if (!subscription) {
+      const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey
+      });
+    }
+
+    // 4. Salva la subscription nel database Supabase legandola all'utente loggato
+    await db.from('push_subscriptions').upsert({
+      nome_utente: currentUser,
+      subscription: subscription.toJSON()
+    }, { onConflict: 'nome_utente' });
+
+    console.log("Dispositivo registrato con successo per le push notifications.");
+  } catch (err) {
+    console.warn("Errore durante la registrazione push:", err);
+  }
+}
+
+// Funzione di utilità per convertire la chiave VAPID
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
