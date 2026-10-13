@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // -------------------------------------------------------------
 
 // INCOLLA QUI LA TUA PUBLIC KEY VAPID GENERATA AL PASSO 1
-const VAPID_PUBLIC_KEY = 'BEimz9m6sBNtgKwPpxcCPoo-54f0yu7yl-9laUa14le5Hbpcwk8SP409LuMj5K0V4Uub6UwANYhkHwTL3VlrlbQ';
+const VAPID_PUBLIC_KEY = 'BAVhUwIR23wV1XqUC4ji-G0ou7Zs6pZKNdGFfvauCKiDkLlxxmxjlndBdGgYFwTr139iXXxtF7OKRpxv-rsRNC0';
 
 async function registraPushNotifications() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
