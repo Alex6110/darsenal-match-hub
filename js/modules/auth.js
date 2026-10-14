@@ -9,7 +9,7 @@ function normalizzaNomeInput(nome) {
 }
 
 // Esecuzione Login con persistenza
-function confermaLogin() {
+async function confermaLogin() {
   const nomeInputEl = document.getElementById('input-nome-utente');
   const pwdInputEl = document.getElementById('input-pwd-admin');
 
@@ -53,6 +53,9 @@ function confermaLogin() {
   localStorage.setItem('darsenal_is_admin', isAdmin ? 'true' : 'false');
 
   applicaStatoUtente();
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
   if (typeof registraPushNotifications === 'function') {
     registraPushNotifications();
   }

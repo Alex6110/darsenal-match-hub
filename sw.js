@@ -26,10 +26,23 @@ self.addEventListener('notificationclick', event => {
     navigator.clearAppBadge().catch(() => {});
   }
 
-  const targetUrl = event.notification.data.url || '/';
+  const relativeUrl = event.notification.data.url || '/';
+  const targetUrl = new URL(relativeUrl, self.location.origin).href;
 
-  // Usa openWindow per forzare l'apertura e la navigazione corretta su Android e iOS
   event.waitUntil(
-    clients.openWindow(targetUrl)
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.focus();
+          if ('navigate' in client) {
+            return client.navigate(targetUrl);
+          }
+          return;
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
   );
 });
