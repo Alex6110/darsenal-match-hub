@@ -943,10 +943,11 @@ async function caricaStatisticheUtente(nomeUtente) {
 
   const [{ data: presenzeDB }, { data: partiteDB }, { data: calendarioDB }, { data: eventiDB }] = await Promise.all([
     db.from('presenze').select('*').eq('stato', 'Presente'),
-    db.from('partite').select('id, data_ora, squadra_avversaria'),
+    db.from('partite').select('id, data_ora, squadra_avversaria, tipo_sondaggio'), 
     db.from('calendario_torneo').select('id, data_ora, squadra_casa, squadra_trasferta'),
     db.from('eventi_partita').select('*')
   ]);
+  
 
   const partiteMap = {};
   if (partiteDB) {

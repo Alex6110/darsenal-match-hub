@@ -130,7 +130,7 @@ async function apriModalSpareggio(partitaId) {
   const [{ data: presenzePartita }, { data: tuttePresenze }, { data: tuttePartite }, { data: calendario }] = await Promise.all([
     db.from('presenze').select('*').eq('id_partita', partitaId).eq('stato', 'Presente'),
     db.from('presenze').select('*').eq('stato', 'Presente'),
-    db.from('partite').select('id, data_ora'),
+    db.from('partite').select('id, data_ora, tipo_sondaggio'), 
     db.from('calendario_torneo').select('id, data_ora')
   ]);
 
