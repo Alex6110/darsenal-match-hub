@@ -10,6 +10,10 @@ self.addEventListener('push', event => {
     data: { url: data.url || '/' }
   };
 
+  if ('setAppBadge' in navigator) {
+    navigator.setAppBadge(1).catch(() => {});
+  }
+
   event.waitUntil(
     self.registration.showNotification(title, options)
   );
@@ -17,13 +21,24 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
+  
+  if ('clearAppBadge' in navigator) {
+    navigator.clearAppBadge().catch(() => {});
+  }
+
+  const targetUrl = event.notification.data.url || '/';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
       for (const client of clientList) {
-        if ('focus' in client) return client.focus();
+        if ('focus' in client) {
+          client.focus();
+          client.navigate(targetUrl);
+          return;
+        }
       }
       if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url);
+        return clients.openWindow(targetUrl);
       }
     })
   );
