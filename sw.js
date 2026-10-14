@@ -28,18 +28,8 @@ self.addEventListener('notificationclick', event => {
 
   const targetUrl = event.notification.data.url || '/';
 
+  // Usa openWindow per forzare l'apertura e la navigazione corretta su Android e iOS
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if ('focus' in client) {
-          client.focus();
-          client.navigate(targetUrl);
-          return;
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-    })
+    clients.openWindow(targetUrl)
   );
 });

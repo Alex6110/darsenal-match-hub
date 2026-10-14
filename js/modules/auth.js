@@ -53,6 +53,9 @@ function confermaLogin() {
   localStorage.setItem('darsenal_is_admin', isAdmin ? 'true' : 'false');
 
   applicaStatoUtente();
+  if (typeof registraPushNotifications === 'function') {
+    registraPushNotifications();
+  }
   if (typeof aggiornaBadgeNavSondaggiIniziale === 'function') {
     aggiornaBadgeNavSondaggiIniziale();
   }
@@ -135,6 +138,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (savedUser) {
     currentUser = savedUser;
     isAdmin = savedAdmin === 'true';
+    if (typeof registraPushNotifications === 'function') {
+      registraPushNotifications();
+    }
   }
 
   const nomeInput = document.getElementById('input-nome-utente');
