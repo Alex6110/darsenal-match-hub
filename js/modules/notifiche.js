@@ -129,7 +129,7 @@ function avviaAscoltatoriRealtime() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'voti_sondaggi' }, payload => {
       const voto = payload.new;
       if (isAdmin && voto.nome_utente?.toLowerCase() !== currentUser?.toLowerCase()) {
-        mostraNotificaSystem("Nuovo Voto Sondaggio", `${voto.nome_utente} ha votato "${voto.opzione_scelta}".`);
+        mostraNotificaSistema("Nuovo Voto Sondaggio", `${voto.nome_utente} ha votato "${voto.opzione_scelta}".`);
         if (typeof caricaSondaggi === 'function') caricaSondaggi();
       }
     })
@@ -159,36 +159,33 @@ async function registraPushNotifications() {
   if (!currentUser) return;
 
   try {
-    // 1. Registra il Service Worker
     const reg = await navigator.serviceWorker.register('/sw.js');
     await navigator.serviceWorker.ready;
 
-    // 2. Chiedi il permesso per le notifiche se non è già stato fatto
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
 
-    // 3. FORZA LA CANCELLAZIONE della vecchia sottoscrizione in cache (Risolve BadVapidPublicKey)
+    // Ottieni la sottoscrizione attuale senza cancellarla ad ogni avvio
     let subscription = await reg.pushManager.getSubscription();
-    if (subscription) {
-      await subscription.unsubscribe();
+
+    // Se non esiste ancora, creala
+    if (!subscription) {
+      const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey
+      });
     }
 
-    // 4. Crea una NUOVA sottoscrizione pulita con la chiave VAPID corrente
-    const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-    subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: convertedKey
-    });
-
-    // 5. Salva la nuova subscription nel database Supabase
+    // Salva/aggiorna la subscription nel DB di Supabase
     await db.from('push_subscriptions').upsert({
       nome_utente: currentUser,
       subscription: subscription.toJSON()
     }, { onConflict: 'nome_utente' });
 
-    console.log("Dispositivo registrato con successo e chiave aggiornata.");
+    console.log("Dispositivo registrato correttamente per:", currentUser);
   } catch (err) {
-    console.warn("Errore durante la registrazione push:", err);
+    console.warn("Errore registrazione push:", err);
   }
 }
 
