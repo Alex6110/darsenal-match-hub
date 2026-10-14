@@ -159,16 +159,23 @@ async function registraPushNotifications() {
   if (!currentUser) return;
 
   try {
+    // 1. Registra il Service Worker
     const reg = await navigator.serviceWorker.register('/sw.js');
+
+    // 2. ATTESA ATTIVA: Assicurati che il Service Worker sia pronto e attivo
     await navigator.serviceWorker.ready;
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return;
+    // 3. Controlla il permesso (se non è 'granted', esce subito senza bloccare)
+    if (Notification.permission === 'default') {
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+    } else if (Notification.permission !== 'granted') {
+      return;
+    }
 
-    // Ottieni la sottoscrizione attuale senza cancellarla ad ogni avvio
+    // 4. Recupera o crea la sottoscrizione con un controllo di stabilità
     let subscription = await reg.pushManager.getSubscription();
 
-    // Se non esiste ancora, creala
     if (!subscription) {
       const convertedKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       subscription = await reg.pushManager.subscribe({
@@ -177,15 +184,19 @@ async function registraPushNotifications() {
       });
     }
 
-    // Salva/aggiorna la subscription nel DB di Supabase
-    await db.from('push_subscriptions').upsert({
+    // 5. Salva su Supabase
+    const { error } = await db.from('push_subscriptions').upsert({
       nome_utente: currentUser,
       subscription: subscription.toJSON()
     }, { onConflict: 'nome_utente' });
 
-    console.log("Dispositivo registrato correttamente per:", currentUser);
+    if (error) {
+      console.warn("Errore salvataggio subscription su DB:", error);
+    } else {
+      console.log("Dispositivo registrato con successo per:", currentUser);
+    }
   } catch (err) {
-    console.warn("Errore registrazione push:", err);
+    console.warn("Tentativo push fallito (verrà ritornato al prossimo avvio):", err);
   }
 }
 
