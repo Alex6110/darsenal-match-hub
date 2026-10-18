@@ -39,24 +39,28 @@
     }
     
     /* Contenitore Foglio Distinta - Compatto e allineato al PDF */
+    
+    .a4-page-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .a4-page {
         width: 560px;
         min-height: 842px;
         background: #fff;
         margin: 0 auto;
-        padding: 30px 35px 15px 35px; /* Padding superiore/inferiore ridotto per salvare spazio */
+        padding: 30px 35px 15px 35px;
         box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
         font-family: Calibri, "Segoe UI", Arial, sans-serif;
         color: #000;
         transform-origin: top center;
         box-sizing: border-box;
-    }
-
-    /* Adattamento grafico editor per schermi piccoli (SOLO per SCHERMO) */
-    .a4-page-wrapper {
-        width: 100%;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        flex-shrink: 0; /* Impedisce al foglio di deformarsi o spezzarsi */
     }
     @media screen and (max-width: 840px) {
         .a4-page {
