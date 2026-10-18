@@ -99,31 +99,30 @@ async function gestisciAutomazioniSondaggi() {
     const partitaCorrente = calendario[i];
     const dataCorrente = new Date(partitaCorrente.data_ora);
 
-    // Calcoliamo quando deve attivarsi questo sondaggio
+    if (dataCorrente <= adesso) continue;
+
     let dataAttivazione;
 
     if (i === 0) {
-      // Per la prima partita in assoluto: si attiva 4 giorni prima del match alle 10:00
       dataAttivazione = new Date(dataCorrente);
       dataAttivazione.setDate(dataAttivazione.getDate() - 4);
       dataAttivazione.setHours(10, 0, 0, 0);
     } else {
-      // Per tutte le altre: il giorno dopo la partita precedente alle 10:00
       const partitaPrecedente = calendario[i - 1];
       const dataPrecedente = new Date(partitaPrecedente.data_ora);
       
       dataAttivazione = new Date(dataPrecedente);
       dataAttivazione.setDate(dataAttivazione.getDate() + 1); // Il giorno dopo
-      dataAttivazione.setHours(10, 0, 0, 0); // Alle 10:00 di mattina
+      dataAttivazione.setHours(10, 0, 0, 0); // Alle 10:00
     }
 
-    // Se è arrivato il momento di attivare questo sondaggio
+    // Se abbiamo superato le 10:00 del giorno dopo l'ultima partita e il match non è iniziato
     if (adesso >= dataAttivazione && adesso < dataCorrente) {
       const avversario = partitaCorrente.squadra_casa.toLowerCase().includes('darsenal') 
         ? partitaCorrente.squadra_trasferta 
         : partitaCorrente.squadra_casa;
 
-      // Controlla se il sondaggio per questa specifica partita/data esiste già
+      // Controllo memorizzazione: verifica se esiste già per non ripetere l'inserimento
       const { data: esistente } = await db
         .from('partite')
         .select('id')
