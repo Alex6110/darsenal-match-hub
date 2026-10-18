@@ -318,6 +318,10 @@
     z-index: 10;
     transform: translateY(-50%);
   }
+
+
+
+  
 </style>
 
 <!-- Icona per le schede del browser (Favicon) -->
@@ -1042,108 +1046,115 @@
   </div>
 
   <!-- MODALE DISTINTA DIGITALE "EPIC CUP" -->
-  <div id="modal-editor-pdf" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-[90]">
-    <div class="bg-white w-full max-w-4xl h-[95vh] rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
+  <!-- MODALE DISTINTA DIGITALE "EPIC CUP" -->
+<div id="modal-editor-pdf" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-[90]">
+  <div class="bg-white w-full max-w-4xl h-[95vh] rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden">
+    
+    <!-- Toolbar Responsive -->
+    <div class="p-3 sm:p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div>
+        <h3 class="font-black text-sm sm:text-base text-white">Distinta Gara "EPIC CUP"</h3>
+        <p class="text-[10px] text-slate-400 font-medium hidden sm:block">Modifica i testi, le date o i dati di gara direttamente sul foglio prima di stampare.</p>
+      </div>
       
-      <!-- Toolbar Responsive con controlli per righe e stampa -->
-      <div class="p-3 sm:p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div>
-          <h3 class="font-black text-sm sm:text-base text-white">Distinta Gara "EPIC CUP"</h3>
-          <p class="text-[10px] text-slate-400 font-medium hidden sm:block">Modifica le caselle, aggiungi/rimuovi righe o seleziona CAP/V.CAP prima di stampare.</p>
+      <!-- Pulsanti di azione -->
+      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div class="flex items-center bg-slate-800 rounded-xl px-1.5 py-1 border border-slate-700">
+          <button onclick="cambiaZoom(-0.15)" title="Riduci Zoom" class="text-slate-300 hover:text-white font-black text-xs px-2 py-0.5">-</button>
+          <span id="zoom-level-label" class="text-[11px] font-bold text-slate-300 min-w-[38px] text-center">100%</span>
+          <button onclick="cambiaZoom(0.15)" title="Aumenta Zoom" class="text-slate-300 hover:text-white font-black text-xs px-2 py-0.5">+</button>
         </div>
-        
-        <!-- Pulsanti di azione rapida -->
-        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <!-- CONTROLLI ZOOM -->
-          <div class="flex items-center bg-slate-800 rounded-xl px-1.5 py-1 border border-slate-700">
-            <button onclick="cambiaZoom(-0.15)" title="Riduci Zoom" class="text-slate-300 hover:text-white font-black text-xs px-2 py-0.5">-</button>
-            <span id="zoom-level-label" class="text-[11px] font-bold text-slate-300 min-w-[38px] text-center">100%</span>
-            <button onclick="cambiaZoom(0.15)" title="Aumenta Zoom" class="text-slate-300 hover:text-white font-black text-xs px-2 py-0.5">+</button>
-          </div>
-          <button onclick="aggiungiRigaGiocatore()" title="Aggiungi riga giocatore" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center gap-1">
-            + Riga
-          </button>
-          <button onclick="rimuoviUltimaRigaGiocatore()" title="Rimuovi ultima riga" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center gap-1">
-            - Riga
-          </button>
-          <button onclick="svuotaCampiDistinta()" title="Svuota tutti i campi" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center gap-1">
-            🧹 Svuota
-          </button>
-          <button onclick="stampaESalvaPDF()" class="px-3.5 py-2 bg-burgundy hover:bg-burgundy-dark text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 00-2 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-            Salva / PDF
-          </button>
-          <button onclick="chiudiEditorPDF()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl transition-all">
-            Esci
-          </button>
-        </div>
+        <button onclick="svuotaCampiDistinta()" title="Ripristina/Svuota" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs rounded-xl border border-slate-700 transition-all">
+          🧹 Svuota
+        </button>
+        <button onclick="stampaESalvaPDF()" class="px-3.5 py-2 bg-burgundy hover:bg-burgundy-dark text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 00-2-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 00-2 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          Stampa / PDF
+        </button>
+        <button onclick="chiudiEditorPDF()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-xl transition-all">
+          Esci
+        </button>
       </div>
-
-      <!-- Area Foglio A4 Digitalizzato -->
-      <div class="flex-1 bg-slate-200 overflow-auto p-2 sm:p-4 flex justify-center items-start a4-page-wrapper">
-        <div id="distinta-paper" class="a4-page">
-          <!-- INTESTAZIONE E LOGHI -->
-          <div class="flex justify-between items-center mb-3">
-            <div class="w-14"><img src="logo_csen.png" alt="CSEN" class="w-full object-contain"></div>
-            <div class="text-center">
-              <h1 class="text-lg font-black text-sky-600 tracking-tight">EPIC CUP 2026/27</h1>
-              <h2 class="text-[11px] font-black uppercase text-amber-700 tracking-widest mt-0.5">DISTINTA UFFICIALE PRE-GARA</h2>
-            </div>
-            <div class="w-12"><img src="logo_epic_cup.png" alt="EPIC" class="w-full object-contain"></div>
-          </div>
-
-          <!-- BOX DATI MATCH (Casa, Fuori Casa, Data, Ora) -->
-          <div class="border border-black p-2 mb-3 text-[11px] font-bold">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <div class="flex items-center gap-1 mb-1.5">
-                  <span class="w-16">CASA:</span>
-                  <input type="text" id="pdf-input-casa" class="pdf-input flex-1 border-b border-black font-bold uppercase">
-                </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-16">F. CASA:</span>
-                  <input type="text" id="pdf-input-fcasa" class="pdf-input flex-1 border-b border-black font-bold uppercase">
-                </div>
-              </div>
-              <div>
-                <div class="flex items-center gap-1 mb-1.5">
-                  <span>DATA:</span>
-                  <input type="text" id="pdf-input-data-gg" class="pdf-input w-6 text-center border-b border-black"> /
-                  <input type="text" id="pdf-input-data-mm" class="pdf-input w-6 text-center border-b border-black"> /
-                  <input type="text" id="pdf-input-data-aa" class="pdf-input w-10 text-center border-b border-black">
-                  <span class="ml-2">ORA:</span>
-                  <input type="text" id="pdf-input-ora" class="pdf-input w-12 text-center border-b border-black">
-                </div>
-                <div class="flex items-center gap-1">
-                  <span class="w-16">ARBITRO:</span>
-                  <input type="text" id="pdf-input-arbitro" class="pdf-input flex-1 border-b border-black uppercase">
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- TABELLA GIOCATORI -->
-          <table class="w-full border-collapse border border-black text-xs mb-3 main-table">
-            <thead>
-              <tr class="bg-black text-white font-bold text-[10px] uppercase">
-                <th class="border border-black p-1 w-8 text-center">N°</th>
-                <th class="border border-black p-1 w-14 text-center">MAGLIA</th>
-                <th class="border border-black p-1 text-left">COGNOME E NOME</th>
-                <th class="border border-black p-1 w-28 text-center">DATA NASCITA</th>
-                <th class="border border-black p-1 w-12 text-center">GOL</th>
-                <th class="border border-black p-1 w-14 text-center">ASSIST</th>
-              </tr>
-            </thead>
-            <tbody id="pdf-table-giocatori-body">
-              <!-- Popolato dinamicamente da pdf.js -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
-  </div>
 
+    <!-- Area Foglio A4 Modificabile -->
+    <div class="flex-1 bg-slate-200 overflow-auto p-2 sm:p-4 flex justify-center items-start a4-page-wrapper">
+      <div id="distinta-paper" class="a4-page sheet">
+        
+        <!-- Header con Loghi CSEN ed EPIC CUP (Base64) -->
+        <div class="brand flex items-center justify-between pb-2 mb-2">
+          <img alt="Logo CSEN" class="w-16 h-16 object-contain" src="data:image/jpeg;base64,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" />
+          <div class="text-center">
+            <h1 contenteditable="true" class="text-xl font-serif text-[#0078bd] font-bold">EPIC CUP 2026/27</h1>
+            <h2 contenteditable="true" class="text-sm font-serif text-[#a97600] font-bold mt-1">DISTINTA UFFICIALE PRE-GARA</h2>
+          </div>
+          <img alt="Logo EPIC CUP" class="w-16 h-16 object-contain" src="data:image/jpeg;base64,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` />
+        </div>
+
+        <!-- Info Match -->
+        <table class="info w-full text-xs font-serif mb-2">
+          <tr>
+            <td>CASA: <span contenteditable="true" id="pdf-casa-name">DARSENAL</span></td>
+            <td class="text-right">DATA: <span contenteditable="true" id="pdf-data-text">____ / ____ / 2026</span> &nbsp; ORA: <span contenteditable="true" id="pdf-ora-text">______</span></td>
+          </tr>
+          <tr>
+            <td>F.CASA: <span contenteditable="true" id="pdf-fcasa-name">______________________________</span></td>
+            <td class="text-right">ARBITRO: <span contenteditable="true" id="pdf-arbitro-name">____________________________</span></td>
+          </tr>
+        </table>
+
+        <!-- Tabella Giocatori -->
+        <table class="roster main-table w-full border-collapse my-2">
+          <colgroup>
+            <col style="width:5%">
+            <col style="width:8%">
+            <col style="width:51%">
+            <col style="width:18%">
+            <col style="width:9%">
+            <col style="width:9%">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>MAGLIA</th>
+              <th>COGNOME E NOME</th>
+              <th>DATA NASCITA</th>
+              <th>GOL</th>
+              <th>ASSIST</th>
+            </tr>
+          </thead>
+          <tbody id="pdf-table-giocatori-body">
+            <!-- Popolato dinamicamente da pdf.js -->
+          </tbody>
+        </table>
+
+        <!-- Dirgenti e Firme -->
+        <div class="leaders-title text-center text-xs font-serif font-bold text-[#a97600] my-2" contenteditable="true">
+          DIRIGENTI / ACCOMPAGNATORI
+        </div>
+        <table class="leaders w-full text-xs font-serif mb-3">
+          <tr>
+            <td>1. <span contenteditable="true">________________________________________</span></td>
+            <td>2. <span contenteditable="true">________________________________________</span></td>
+          </tr>
+        </table>
+
+        <div class="signatures flex justify-around text-center text-xs font-serif font-bold mt-2">
+          <div class="sign w-2/5">
+            FIRMA DIRIGENTE
+            <div class="line border-b border-black h-6 mt-1 font-normal" contenteditable="true"></div>
+          </div>
+          <div class="sign w-2/5">
+            FIRMA ARBITRO
+            <div class="line border-b border-black h-6 mt-1 font-normal" contenteditable="true"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
   
 
 
