@@ -322,7 +322,10 @@
     z-index: 10;
     transform: translateY(-50%);
   }
-
+.a4-page table {
+        table-layout: fixed;
+        word-break: break-word;
+    }
 
 
   
@@ -1096,14 +1099,18 @@
         </div>
 
         <!-- Info Match -->
-        <table class="info w-full text-xs font-serif mb-2">
+        <table class="info w-full text-xs font-serif mb-2" style="table-layout: fixed;">
+          <colgroup>
+            <col style="width: 50%">
+            <col style="width: 50%">
+          </colgroup>
           <tr>
-            <td>CASA: <span contenteditable="true" id="pdf-casa-name">DARSENAL</span></td>
-            <td class="text-right">DATA: <span contenteditable="true" id="pdf-data-text">____ / ____ / 2026</span> &nbsp; ORA: <span contenteditable="true" id="pdf-ora-text">______</span></td>
+            <td class="truncate">CASA: <span contenteditable="true" id="pdf-casa-name" class="font-bold">DARSENAL</span></td>
+            <td class="text-right truncate">DATA: <span contenteditable="true" id="pdf-data-text">__/__/2026</span> &nbsp; ORA: <span contenteditable="true" id="pdf-ora-text">__:__</span></td>
           </tr>
           <tr>
-            <td>F.CASA: <span contenteditable="true" id="pdf-fcasa-name">______________________________</span></td>
-            <td class="text-right">ARBITRO: <span contenteditable="true" id="pdf-arbitro-name">____________________________</span></td>
+            <td class="truncate">F.CASA: <span contenteditable="true" id="pdf-fcasa-name" class="inline-block border-b border-black w-36 align-bottom px-1"></span></td>
+            <td class="text-right truncate">ARBITRO: <span contenteditable="true" id="pdf-arbitro-name" class="inline-block border-b border-black w-36 align-bottom px-1"></span></td>
           </tr>
         </table>
 
@@ -1132,14 +1139,18 @@
           </tbody>
         </table>
 
-        <!-- Dirgenti e Firme -->
+        <!-- Dirigenti e Firme -->
         <div class="leaders-title text-center text-xs font-serif font-bold text-[#a97600] my-2" contenteditable="true">
           DIRIGENTI / ACCOMPAGNATORI
         </div>
-        <table class="leaders w-full text-xs font-serif mb-3">
+        <table class="leaders w-full text-xs font-serif mb-3" style="table-layout: fixed;">
+          <colgroup>
+            <col style="width: 50%">
+            <col style="width: 50%">
+          </colgroup>
           <tr>
-            <td>1. <span contenteditable="true">________________________________________</span></td>
-            <td>2. <span contenteditable="true">________________________________________</span></td>
+            <td>1. <span contenteditable="true" class="inline-block border-b border-black w-48 align-bottom px-1"></span></td>
+            <td>2. <span contenteditable="true" class="inline-block border-b border-black w-48 align-bottom px-1"></span></td>
           </tr>
         </table>
 
