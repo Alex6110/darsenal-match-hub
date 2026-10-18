@@ -1066,119 +1066,91 @@
       <!-- Area Foglio A4 Digitalizzato -->
       <div class="flex-1 bg-slate-200 overflow-auto p-2 sm:p-4 flex justify-center items-start a4-page-wrapper">
         <div id="distinta-paper" class="a4-page">
-
-            <!-- BOX 1: Intestazione e Giocatori -->
-            <div class="box-main">
-                <div class="header-title">DISTINTE GARE "EPIC CUP"</div>
-                <div class="empty-band"></div>
-                
-                <!-- Banda VS con puntini in sottofondo -->
-                <div class="vs-band">
-                    <div class="vs-dots-bg">....................................................................................................</div>
-                    <input type="text" id="pdf-input-casa" class="pdf-input vs-input text-right font-bold uppercase" value="DARSENAL">
-                    <span class="vs-label">&nbsp;VS&nbsp;</span>
-                    <input type="text" id="pdf-input-trasferta" class="pdf-input vs-input text-left font-bold uppercase" value="">
-                </div>
-                
-                <div class="empty-band" style="border-bottom: none;"></div>
-                
-                <table class="main-table">
-                    <thead>
-                        <tr>
-                            <th class="col-ris">RIS ARBITRO</th>
-                            <th class="col-num">N°</th>
-                            <th class="col-nome">COGNOME e NOME</th>
-                            <th class="col-nascita">DATA DI NASCITA</th>
-                            <th class="col-cap">CAP/V.CAP</th>
-                            <th class="col-doc">DOC. D' IDENTITA'</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pdf-table-giocatori-body">
-                    </tbody>
-                </table>
+          <!-- INTESTAZIONE LOGHI E TITOLI -->
+          <div class="header-container flex justify-between items-center mb-3">
+            <div class="logo-csen w-14">
+              <img src="logo_csen.png" alt="CSEN Logo" class="w-full object-contain">
             </div>
-
-            <!-- BOX 2: Risultato Finale e Note -->
-            <div class="box-notes">
-                <div class="result-line">
-                    <span>RISULTATO FINALE:&nbsp;</span>
-                    <span class="dots-flex">.........................................................................</span>
-                    <span class="center-line"></span>
-                    <span class="dots-flex">.........................................................................</span>
-                </div>
-                <div class="notes-container">
-                    <div class="notes-row">
-                        <div class="notes-left-first">
-                            <strong>NOTE &nbsp;&nbsp;&nbsp;&nbsp;:</strong> .........................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
-                        </div>
-                        <div class="notes-right"></div>
-                    </div>
-                    <div class="notes-row">
-                        <div class="notes-left">
-                            ...................................................................................................................................................
-                        </div>
-                        <div class="notes-right">
-                            ........................
-                        </div>
-                    </div>
-                    <div class="notes-row">
-                        <div class="notes-left">
-                            ...................................................................................................................................................
-                        </div>
-                        <div class="notes-right">
-                            ........................
-                        </div>
-                    </div>
-                    <div class="notes-row">
-                        <div class="notes-left">
-                            ...................................................................................................................................................
-                        </div>
-                        <div class="notes-right">
-                            ........................
-                        </div>
-                    </div>
-                </div>
+            <div class="text-center">
+              <h1 class="text-lg font-black text-sky-600 tracking-tight">EPIC CUP 2026/27</h1>
+              <h2 class="text-[11px] font-black uppercase text-amber-700 tracking-widest mt-0.5">DISTINTA UFFICIALE PRE-GARA</h2>
             </div>
-
-            <!-- BOX 3: Tabella Staff -->
-            <table class="staff-table">
-                <thead>
-                    <tr>
-                        <th class="col-staff-ruolo">RUOLO</th>
-                        <th class="col-staff-nome">COGNOME e NOME</th>
-                        <th class="col-staff-doc">DOC. D'IDENTITA</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><input type="text" class="pdf-input"></td>
-                        <td><input type="text" class="pdf-input font-bold uppercase"></td>
-                        <td><input type="text" class="pdf-input"></td>
-                    </tr>
-                    <tr>
-                        <td><input type="text" class="pdf-input"></td>
-                        <td><input type="text" class="pdf-input font-bold uppercase"></td>
-                        <td><input type="text" class="pdf-input"></td>
-                    </tr>
-                    <tr>
-                        <td><input type="text" class="pdf-input"></td>
-                        <td><input type="text" class="pdf-input font-bold uppercase"></td>
-                        <td><input type="text" class="pdf-input"></td>
-                    </tr>
-                    <tr>
-                        <td><input type="text" class="pdf-input"></td>
-                        <td><input type="text" class="pdf-input font-bold uppercase"></td>
-                        <td><input type="text" class="pdf-input"></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- FIRME IN BASSO -->
-            <div class="signatures">
-                <div>FIRMA ARBITRO</div>
-                <div>FIRMA DIRGENTE</div>
+            <div class="logo-epic w-12">
+              <img src="logo_epic_cup.png" alt="EPIC CUP Logo" class="w-full object-contain">
             </div>
+          </div>
 
+          <!-- BOX DATI MATCH -->
+          <div class="box-match-info border border-black p-2 mb-3 text-[11px] font-bold">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <div class="flex items-center gap-1 mb-1.5">
+                  <span class="w-12">CASA:</span>
+                  <input type="text" id="pdf-input-casa" class="flex-1 border-b border-black font-bold uppercase focus:outline-none">
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="w-12">F.CASA:</span>
+                  <input type="text" id="pdf-input-fcasa" class="flex-1 border-b border-black font-bold uppercase focus:outline-none">
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center gap-1 mb-1.5">
+                  <span>DATA:</span>
+                  <input type="text" id="pdf-input-data-gg" class="w-6 text-center border-b border-black focus:outline-none"> /
+                  <input type="text" id="pdf-input-data-mm" class="w-6 text-center border-b border-black focus:outline-none"> / 2026
+                  <span class="ml-2">ORA:</span>
+                  <input type="text" id="pdf-input-ora" class="w-12 text-center border-b border-black focus:outline-none">
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="w-16">ARBITRO:</span>
+                  <input type="text" id="pdf-input-arbitro" class="flex-1 border-b border-black uppercase focus:outline-none">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TABELLA GIOCATORI -->
+          <table class="w-full border-collapse border border-black text-xs mb-3">
+            <thead>
+              <tr class="bg-black text-white font-bold text-[10px] uppercase">
+                <th class="border border-black p-1 w-8 text-center">N°</th>
+                <th class="border border-black p-1 w-14 text-center">MAGLIA</th>
+                <th class="border border-black p-1 text-left">COGNOME E NOME</th>
+                <th class="border border-black p-1 w-28 text-center">DATA NASCITA</th>
+                <th class="border border-black p-1 w-12 text-center">GOL</th>
+                <th class="border border-black p-1 w-14 text-center">ASSIST</th>
+              </tr>
+            </thead>
+            <tbody id="pdf-table-giocatori-body">
+              <!-- Generato dinamicamente in JS -->
+            </tbody>
+          </table>
+
+          <!-- SEZIONE DIRIGENTI E FIRME -->
+          <div class="text-[10px] font-bold text-center uppercase tracking-widest text-amber-700 mb-1">
+            DIRIGENTI / ACCOMPAGNATORI
+          </div>
+          <div class="border border-black p-2 mb-6 text-xs font-bold space-y-1.5">
+            <div class="flex items-center gap-2">
+              <span>1.</span>
+              <input type="text" id="pdf-input-dirigente-1" class="flex-1 border-b border-black focus:outline-none">
+            </div>
+            <div class="flex items-center gap-2">
+              <span>2.</span>
+              <input type="text" id="pdf-input-dirigente-2" class="flex-1 border-b border-black focus:outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-12 text-[11px] font-bold text-center mt-8">
+            <div>
+              <div class="border-b border-black mb-1.5 h-6"></div>
+              <span>FIRMA DIRIGENTE</span>
+            </div>
+            <div>
+              <div class="border-b border-black mb-1.5 h-6"></div>
+              <span>FIRMA ARBITRO</span>
+            </div>
+          </div>
         </div>
       </div>
 
