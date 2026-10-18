@@ -131,7 +131,7 @@ async function gestisciAutomazioniSondaggi() {
         .eq('data_ora', partitaCorrente.data_ora);
 
       if (!esistente || esistente.length === 0) {
-        await db.from('partite'].insert([{
+        await db.from('partite').insert([{
           squadra_avversaria: avversario,
           data_ora: partitaCorrente.data_ora,
           luogo: partitaCorrente.luogo || 'Campo Sportivo',
