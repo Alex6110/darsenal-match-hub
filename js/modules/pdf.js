@@ -32,11 +32,10 @@ async function generaDistintaPDF(partitaId = null) {
     const idSondaggio = sondaggioAttivo.id;
     let nomiGiocatoriConvocati = [];
 
-    // Priorità ai 12 convocati confermati dall'admin
-    if (sondaggioAttivo.scelte_admin && Array.isArray(sondaggioAttivo.scelte_admin) && sondaggioAttivo.scelte_admin.length === 12) {
+    // 1. Lettura dei nomi dal sondaggio / convocazioni admin
+    if (sondaggioAttivo.scelte_admin && Array.isArray(sondaggioAttivo.scelte_admin) && sondaggioAttivo.scelte_admin.length > 0) {
       nomiGiocatoriConvocati = sondaggioAttivo.scelte_admin;
     } else {
-      // Preleva tutti i presenti del sondaggio
       const { data: presenti, error: errPresenti } = await db
         .from('presenze')
         .select('nome_utente')
@@ -51,15 +50,13 @@ async function generaDistintaPDF(partitaId = null) {
     const normalizzaNome = (nome) => nome?.toLowerCase().trim().split(/\s+/).sort().join(' ');
     const nomiConvocatiNorm = nomiGiocatoriConvocati.map(n => normalizzaNome(n));
 
-    // Carica la rosa completa (da GIOCATORI_MOCK o DB)
+    // Caricamento rosa completa
     let rosaCompleta = (typeof GIOCATORI_MOCK !== 'undefined' && Array.isArray(GIOCATORI_MOCK)) 
       ? [...GIOCATORI_MOCK] 
       : [];
-
-    // Ordina la rosa alfabeticamente per cognome/nome
     rosaCompleta.sort((a, b) => (a.nome_completo || a.nome).localeCompare(b.nome_completo || b.nome));
 
-    // Gestione Nomi Squadre da Calendario o Sondaggio
+    // 2. Inserimento Squadra di Casa e Fuori Casa
     let testoCasa = "DARSENAL"; 
     let testoFuoriCasa = (sondaggioAttivo.squadra_avversaria || '').toUpperCase();
 
@@ -74,12 +71,12 @@ async function generaDistintaPDF(partitaId = null) {
       testoFuoriCasa = matchCalendario[0].squadra_trasferta.toUpperCase();
     }
 
-    // Compilazione Intestazione (CASA, F.CASA, DATA, ORA)
     const inputCasa = document.getElementById('pdf-input-casa');
     const inputFCasa = document.getElementById('pdf-input-fcasa');
     if (inputCasa) inputCasa.value = testoCasa;
     if (inputFCasa) inputFCasa.value = testoFuoriCasa;
 
+    // 3. Inserimento Data in formato europeo (GG / MM / AAAA) e Ora
     if (sondaggioAttivo.data_ora) {
       const d = new Date(sondaggioAttivo.data_ora);
       const gg = String(d.getDate()).padStart(2, '0');
@@ -98,7 +95,7 @@ async function generaDistintaPDF(partitaId = null) {
       if (inputOra) inputOra.value = oraStr;
     }
 
-    // GENERAZIONE 20 RIGHE CON ROSA COMPLETA & SBARRAMENTO
+    // 4. Compilazione righe: confronto presenza, inserimento dati o sbarramento riga
     const tbody = document.getElementById('pdf-table-giocatori-body');
     if (tbody) {
       let rowsHTML = '';
@@ -109,10 +106,11 @@ async function generaDistintaPDF(partitaId = null) {
         const nomeGiocatore = g ? (g.nome_completo || g.nome) : '';
         const isPresente = g ? nomiConvocatiNorm.includes(normalizzaNome(nomeGiocatore)) : false;
 
+        // Se presente inserisce numero maglia e data nascita, altrimenti celle vuote
         const numMagliaTxt = (g && isPresente) ? (g.numero_maglia || '') : '';
         const dataTxt = (g && isPresente) ? (g.data_nascita || '') : '';
         
-        // Classe per tirare la linea nera se assente
+        // Se non presente, applica la classe per tirare una linea su tutta la riga
         const lineThroughClass = (g && !isPresente) ? 'row-sbarrata' : '';
 
         rowsHTML += `
@@ -137,18 +135,16 @@ async function generaDistintaPDF(partitaId = null) {
           </tr>
         `;
       }
-
       tbody.innerHTML = rowsHTML;
     }
 
     apriModalEditorPDF();
 
   } catch (error) {
-    console.error("Errore inizializzazione distinta PDF:", error);
-    mostraAlert("Si è verificato un errore durante la creazione della distinta PDF.");
+    console.error("Errore generazione distinta:", error);
+    mostraAlert("Errore durante la creazione della distinta.");
   }
 }
-
 function apriModalEditorPDF() {
   const modal = document.getElementById('modal-editor-pdf');
   if (modal) {
@@ -162,75 +158,57 @@ function chiudiEditorPDF() {
   if (modal) modal.classList.add('hidden');
 }
 
-// GESTIONE DOWNLOAD COMPATIBILE ANCHE SU PWA E DISPOSITIVI MOBILI
+// STAMPA / SALVATAGGIO IN PDF CON SINCRONIZZAZIONE E PROPORZIONI PERFETTE
 function stampaESalvaPDF() {
   const elementoDaStampare = document.getElementById('distinta-paper');
   if (!elementoDaStampare) return;
 
-  // Sincronizza i valori degli input nel DOM prima del rendering/stampa
+  // Sincronizza lo stato degli input nel DOM
   elementoDaStampare.querySelectorAll('input').forEach(input => {
     input.setAttribute('value', input.value);
   });
 
+  // Rilevamento ambiente PWA o Mobile
   const isStandalonePWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-  // Se siamo in PWA mobile usiamo la stampa integrata nativa per evitare blocchi popup
   if (isStandalonePWA || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    // Sulla PWA mobile apre direttamente il modulo di stampa/salvataggio PDF nativo del dispositivo
     window.print();
     return;
   }
 
-  // Comportamento standard Desktop (finestra di stampa pulita)
-  const styles = Array.from(document.querySelectorAll('style')).map(s => s.innerHTML).join('\n');
-  const finestraStampa = window.open('', '', 'height=900,width=800');
-  
-  if (!finestraStampa) {
-    // Fallback se il popup viene bloccato dal browser
-    window.print();
-    return;
-  }
-
-  finestraStampa.document.write('<!DOCTYPE html><html><head><title>Distinta Ufficiale EPIC CUP</title>');
-  finestraStampa.document.write(`
-    <style>
-      ${styles}
-      @page { size: A4 portrait; margin: 0; }
-      html, body { height: 100% !important; margin: 0 !important; padding: 0 !important; background: #fff !important; overflow: hidden !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      .a4-page { width: 595px !important; padding: 30px 40px !important; box-shadow: none !important; margin: 0 auto !important; zoom: 1.15 !important; transform: none !important; page-break-inside: avoid !important; break-inside: avoid !important; }
-      input { border: none !important; outline: none !important; background: transparent; box-shadow: none !important; }
-    </style>
-  `);
-  
-  finestraStampa.document.write('</head><body>');
-  finestraStampa.document.write(elementoDaStampare.outerHTML);
-  finestraStampa.document.write('</body></html>');
-  finestraStampa.document.close();
-
-  setTimeout(() => {
-    finestraStampa.focus();
-    finestraStampa.print();
-    finestraStampa.close();
-  }, 300);
+  // Fallback per Desktop
+  window.print();
 }
-
 function svuotaCampiDistinta() {
   const paper = document.getElementById('distinta-paper');
   if (!paper) return;
   paper.querySelectorAll('input').forEach(input => input.value = '');
 }
 
-// GESTIONE ZOOM E CONTROLLI TOUCH
+// -------------------------------------------------------------
+// GESTIONE ZOOM E SPOSTAMENTO (PAN & PINCH-TO-ZOOM)
+// -------------------------------------------------------------
+
 let currentZoomScale = 1.0;
-let panX = 0, panY = 0;
-let isDragging = false, startX = 0, startY = 0;
-let initialDistance = null, initialZoom = 1.0;
+let panX = 0;
+let panY = 0;
+
+let isDragging = false;
+let startX = 0, startY = 0;
+let initialDistance = null;
+let initialZoom = 1.0;
 
 function initZoom() {
-  if (window.innerWidth <= 600) currentZoomScale = 0.55;
-  else if (window.innerWidth <= 840) currentZoomScale = 0.75;
-  else currentZoomScale = 1.0;
-
-  panX = 0; panY = 0;
+  if (window.innerWidth <= 600) {
+    currentZoomScale = 0.55;
+  } else if (window.innerWidth <= 840) {
+    currentZoomScale = 0.75;
+  } else {
+    currentZoomScale = 1.0;
+  }
+  panX = 0;
+  panY = 0;
   applicaZoom();
   setupTouchAndMouseGestures();
 }
@@ -249,7 +227,9 @@ function applicaZoom() {
     paper.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoomScale})`;
     paper.style.transformOrigin = 'top center';
   }
-  if (label) label.innerText = `${Math.round(currentZoomScale * 100)}%`;
+  if (label) {
+    label.innerText = `${Math.round(currentZoomScale * 100)}%`;
+  }
 }
 
 function setupTouchAndMouseGestures() {
@@ -259,6 +239,7 @@ function setupTouchAndMouseGestures() {
 
   wrapper.addEventListener('touchstart', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.closest('button')) return;
+    
     if (e.touches.length === 1) {
       isDragging = true;
       startX = e.touches[0].clientX - panX;
@@ -272,6 +253,7 @@ function setupTouchAndMouseGestures() {
 
   wrapper.addEventListener('touchmove', (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.closest('button')) return;
+
     if (e.touches.length === 1 && isDragging) {
       panX = e.touches[0].clientX - startX;
       panY = e.touches[0].clientY - startY;

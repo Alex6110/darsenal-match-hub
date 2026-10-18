@@ -1082,51 +1082,48 @@
       <!-- Area Foglio A4 Digitalizzato -->
       <div class="flex-1 bg-slate-200 overflow-auto p-2 sm:p-4 flex justify-center items-start a4-page-wrapper">
         <div id="distinta-paper" class="a4-page">
-          <!-- INTESTAZIONE LOGHI E TITOLI -->
-          <div class="header-container flex justify-between items-center mb-3">
-            <div class="logo-csen w-14">
-              <img src="logo_csen.png" alt="CSEN Logo" class="w-full object-contain">
-            </div>
+          <!-- INTESTAZIONE E LOGHI -->
+          <div class="flex justify-between items-center mb-3">
+            <div class="w-14"><img src="logo_csen.png" alt="CSEN" class="w-full object-contain"></div>
             <div class="text-center">
               <h1 class="text-lg font-black text-sky-600 tracking-tight">EPIC CUP 2026/27</h1>
               <h2 class="text-[11px] font-black uppercase text-amber-700 tracking-widest mt-0.5">DISTINTA UFFICIALE PRE-GARA</h2>
             </div>
-            <div class="logo-epic w-12">
-              <img src="logo_epic_cup.png" alt="EPIC CUP Logo" class="w-full object-contain">
-            </div>
+            <div class="w-12"><img src="logo_epic_cup.png" alt="EPIC" class="w-full object-contain"></div>
           </div>
 
-          <!-- BOX DATI MATCH -->
-          <div class="box-match-info border border-black p-2 mb-3 text-[11px] font-bold">
+          <!-- BOX DATI MATCH (Casa, Fuori Casa, Data, Ora) -->
+          <div class="border border-black p-2 mb-3 text-[11px] font-bold">
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <div class="flex items-center gap-1 mb-1.5">
-                  <span class="w-12">CASA:</span>
-                  <input type="text" id="pdf-input-casa" class="flex-1 border-b border-black font-bold uppercase focus:outline-none">
+                  <span class="w-16">CASA:</span>
+                  <input type="text" id="pdf-input-casa" class="pdf-input flex-1 border-b border-black font-bold uppercase">
                 </div>
                 <div class="flex items-center gap-1">
-                  <span class="w-12">F.CASA:</span>
-                  <input type="text" id="pdf-input-fcasa" class="flex-1 border-b border-black font-bold uppercase focus:outline-none">
+                  <span class="w-16">F. CASA:</span>
+                  <input type="text" id="pdf-input-fcasa" class="pdf-input flex-1 border-b border-black font-bold uppercase">
                 </div>
               </div>
               <div>
                 <div class="flex items-center gap-1 mb-1.5">
                   <span>DATA:</span>
-                  <input type="text" id="pdf-input-data-gg" class="w-6 text-center border-b border-black focus:outline-none"> /
-                  <input type="text" id="pdf-input-data-mm" class="w-6 text-center border-b border-black focus:outline-none"> / 2026
+                  <input type="text" id="pdf-input-data-gg" class="pdf-input w-6 text-center border-b border-black"> /
+                  <input type="text" id="pdf-input-data-mm" class="pdf-input w-6 text-center border-b border-black"> /
+                  <input type="text" id="pdf-input-data-aa" class="pdf-input w-10 text-center border-b border-black">
                   <span class="ml-2">ORA:</span>
-                  <input type="text" id="pdf-input-ora" class="w-12 text-center border-b border-black focus:outline-none">
+                  <input type="text" id="pdf-input-ora" class="pdf-input w-12 text-center border-b border-black">
                 </div>
                 <div class="flex items-center gap-1">
                   <span class="w-16">ARBITRO:</span>
-                  <input type="text" id="pdf-input-arbitro" class="flex-1 border-b border-black uppercase focus:outline-none">
+                  <input type="text" id="pdf-input-arbitro" class="pdf-input flex-1 border-b border-black uppercase">
                 </div>
               </div>
             </div>
           </div>
 
           <!-- TABELLA GIOCATORI -->
-          <table class="w-full border-collapse border border-black text-xs mb-3">
+          <table class="w-full border-collapse border border-black text-xs mb-3 main-table">
             <thead>
               <tr class="bg-black text-white font-bold text-[10px] uppercase">
                 <th class="border border-black p-1 w-8 text-center">N°</th>
@@ -1138,40 +1135,16 @@
               </tr>
             </thead>
             <tbody id="pdf-table-giocatori-body">
-              <!-- Generato dinamicamente in JS -->
+              <!-- Popolato dinamicamente da pdf.js -->
             </tbody>
           </table>
-
-          <!-- SEZIONE DIRIGENTI E FIRME -->
-          <div class="text-[10px] font-bold text-center uppercase tracking-widest text-amber-700 mb-1">
-            DIRIGENTI / ACCOMPAGNATORI
-          </div>
-          <div class="border border-black p-2 mb-6 text-xs font-bold space-y-1.5">
-            <div class="flex items-center gap-2">
-              <span>1.</span>
-              <input type="text" id="pdf-input-dirigente-1" class="flex-1 border-b border-black focus:outline-none">
-            </div>
-            <div class="flex items-center gap-2">
-              <span>2.</span>
-              <input type="text" id="pdf-input-dirigente-2" class="flex-1 border-b border-black focus:outline-none">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-12 text-[11px] font-bold text-center mt-8">
-            <div>
-              <div class="border-b border-black mb-1.5 h-6"></div>
-              <span>FIRMA DIRIGENTE</span>
-            </div>
-            <div>
-              <div class="border-b border-black mb-1.5 h-6"></div>
-              <span>FIRMA ARBITRO</span>
-            </div>
-          </div>
         </div>
       </div>
 
     </div>
   </div>
+
+  
 
 
   <!-- MODALE DETTAGLIO REAZIONI MESSAGGIO -->
