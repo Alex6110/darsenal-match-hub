@@ -302,6 +302,22 @@
     -webkit-user-select: text;
     user-select: text;
   }
+  /* Stile per sbarrare i giocatori non convocati/assenti */
+  .row-sbarrata input {
+    color: #94a3b8 !important; /* Testo leggermente opaco */
+  }
+
+  .strikethrough-line {
+    position: absolute;
+    top: 50%;
+    left: -40px; /* Estende la linea da prima del nome */
+    right: -180px; /* Estende la linea su tutta la riga fino a gol/assist */
+    height: 2px;
+    background-color: #000;
+    pointer-events: none;
+    z-index: 10;
+    transform: translateY(-50%);
+  }
 </style>
 
 <!-- Icona per le schede del browser (Favicon) -->
