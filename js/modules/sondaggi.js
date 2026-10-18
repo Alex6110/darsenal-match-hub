@@ -87,38 +87,57 @@ async function eliminaSondaggio(idPartita) {
 async function gestisciAutomazioniSondaggi() {
   const adesso = new Date();
 
-  const { data: prossimePartite } = await db.from('calendario_torneo').select('*').gte('data_ora', adesso.toISOString());
+  // Recupera tutto il calendario ordinato cronologicamente per la fase attiva
+  const { data: calendario } = await db
+    .from('calendario_torneo')
+    .select('*')
+    .order('data_ora', { ascending: true });
 
-  if (prossimePartite && prossimePartite.length > 0) {
-    for (const partita of prossimePartite) {
-      const dataPartita = new Date(partita.data_ora);
+  if (!calendario || calendario.length === 0) return;
 
-      const giornoSettimana = dataPartita.getDay();
-      const diffALunedi = (giornoSettimana === 0 ? -6 : 1 - giornoSettimana);
-      const lunediSettimanaPartita = new Date(dataPartita);
-      lunediSettimanaPartita.setDate(dataPartita.getDate() + diffALunedi);
-      lunediSettimanaPartita.setHours(0, 0, 0, 0);
+  for (let i = 0; i < calendario.length; i++) {
+    const partitaCorrente = calendario[i];
+    const dataCorrente = new Date(partitaCorrente.data_ora);
 
-      const sabatoAttivazione = new Date(lunediSettimanaPartita);
-      sabatoAttivazione.setDate(lunediSettimanaPartita.getDate() - 2);
+    // Calcoliamo quando deve attivarsi questo sondaggio
+    let dataAttivazione;
 
-      if (adesso >= sabatoAttivazione) {
-        const avversario = partita.squadra_casa.toLowerCase().includes('darsenal') ? partita.squadra_trasferta : partita.squadra_casa;
+    if (i === 0) {
+      // Per la prima partita in assoluto: si attiva 4 giorni prima del match alle 10:00
+      dataAttivazione = new Date(dataCorrente);
+      dataAttivazione.setDate(dataAttivazione.getDate() - 4);
+      dataAttivazione.setHours(10, 0, 0, 0);
+    } else {
+      // Per tutte le altre: il giorno dopo la partita precedente alle 10:00
+      const partitaPrecedente = calendario[i - 1];
+      const dataPrecedente = new Date(partitaPrecedente.data_ora);
+      
+      dataAttivazione = new Date(dataPrecedente);
+      dataAttivazione.setDate(dataAttivazione.getDate() + 1); // Il giorno dopo
+      dataAttivazione.setHours(10, 0, 0, 0); // Alle 10:00 di mattina
+    }
 
-        const { data: esistente } = await db
-          .from('partite')
-          .select('id, tipo_sondaggio')
-          .eq('squadra_avversaria', avversario)
-          .eq('data_ora', partita.data_ora);
+    // Se è arrivato il momento di attivare questo sondaggio
+    if (adesso >= dataAttivazione && adesso < dataCorrente) {
+      const avversario = partitaCorrente.squadra_casa.toLowerCase().includes('darsenal') 
+        ? partitaCorrente.squadra_trasferta 
+        : partitaCorrente.squadra_casa;
 
-        if (!esistente || esistente.length === 0) {
-          await db.from('partite').insert([{
-            squadra_avversaria: avversario,
-            data_ora: partita.data_ora,
-            luogo: partita.luogo || 'Campo Sportivo',
-            tipo_sondaggio: 'torneo'
-          }]);
-        }
+      // Controlla se il sondaggio per questa specifica partita/data esiste già
+      const { data: esistente } = await db
+        .from('partite')
+        .select('id')
+        .eq('squadra_avversaria', avversario)
+        .eq('data_ora', partitaCorrente.data_ora);
+
+      if (!esistente || esistente.length === 0) {
+        await db.from('partite'].insert([{
+          squadra_avversaria: avversario,
+          data_ora: partitaCorrente.data_ora,
+          luogo: partitaCorrente.luogo || 'Campo Sportivo',
+          tipo_sondaggio: 'torneo'
+        }]);
+        console.log(`Sondaggio creato automaticamente per la partita contro ${avversario}`);
       }
     }
   }
