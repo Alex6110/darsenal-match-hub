@@ -90,7 +90,7 @@ async function generaDistintaPDF(partitaId = null) {
       if (elOra) elOra.innerText = oraStr;
     }
 
-    // 4. Popolamento Tabella
+    // 4. Popolamento Tabella con la struttura corretta della distinta
     const tbody = document.getElementById('pdf-table-giocatori-body');
     if (tbody) {
       let rowsHTML = '';
@@ -126,14 +126,11 @@ async function generaDistintaPDF(partitaId = null) {
   }
 }
 
-// -------------------------------------------------------------
-// GESTIONE DISTINTA DIGITALE "EPIC CUP 2026/27"
-// -------------------------------------------------------------
-
 function apriModalEditorPDF() {
   const modal = document.getElementById('modal-editor-pdf');
   if (modal) {
     modal.classList.remove('hidden');
+    initZoom();
   }
 }
 
@@ -150,9 +147,6 @@ function svuotaCampiDistinta() {
   location.reload();
 }
 
-function cambiaZoom(delta) {
-  // Disattivato o non più necessario con il layout fluido
-}
 // -------------------------------------------------------------
 // GESTIONE ZOOM E CONTROLLO
 // -------------------------------------------------------------
