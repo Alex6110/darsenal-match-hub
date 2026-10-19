@@ -47,10 +47,13 @@
         align-items: flex-start;
         overflow: auto;
         -webkit-overflow-scrolling: touch;
+        padding: 16px;
+        box-sizing: border-box;
     }
 
     .a4-page {
-        width: 560px;
+        width: 100%;
+        max-width: 560px;
         min-height: 842px;
         background: #fff;
         margin: 0 auto;
@@ -58,11 +61,8 @@
         box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
         font-family: Calibri, "Segoe UI", Arial, sans-serif;
         color: #000;
-        transform-origin: top center;
         box-sizing: border-box;
         flex-shrink: 0;
-        position: relative; /* Fondamentale per bloccare gli elementi assoluti all'interno */
-        overflow: hidden;   /* Impedisce ai contenuti di sbordare fuori dal foglio */
     }
     @media screen and (max-width: 840px) {
         .a4-page {
@@ -313,22 +313,22 @@
     color: #94a3b8 !important; /* Testo leggermente opaco */
   }
 
-  .strikethrough-line {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background-color: #000;
-    pointer-events: none;
-    z-index: 10;
-    transform: translateY(-50%);
-  }
-.a4-page table {
+  .a4-page table {
         table-layout: fixed;
         word-break: break-word;
     }
 
+    .strikethrough-line {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #000;
+        pointer-events: none;
+        z-index: 10;
+        transform: translateY(-50%);
+    }
 
   
 </style>

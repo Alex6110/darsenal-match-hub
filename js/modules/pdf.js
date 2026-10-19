@@ -126,11 +126,14 @@ async function generaDistintaPDF(partitaId = null) {
   }
 }
 
+// -------------------------------------------------------------
+// GESTIONE DISTINTA DIGITALE "EPIC CUP 2026/27"
+// -------------------------------------------------------------
+
 function apriModalEditorPDF() {
   const modal = document.getElementById('modal-editor-pdf');
   if (modal) {
     modal.classList.remove('hidden');
-    initZoom();
   }
 }
 
@@ -147,6 +150,9 @@ function svuotaCampiDistinta() {
   location.reload();
 }
 
+function cambiaZoom(delta) {
+  // Disattivato o non più necessario con il layout fluido
+}
 // -------------------------------------------------------------
 // GESTIONE ZOOM E CONTROLLO
 // -------------------------------------------------------------
