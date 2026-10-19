@@ -258,7 +258,7 @@
     }
 
     /* Stili specifici per la Distinta A4 (isolati da Tailwind) */
-  :root { --sheet-font: Caladea, Cambria, Georgia, serif; --sheet-sans: Arial, Helvetica, sans-serif; }
+    :root { --sheet-font: Caladea, Cambria, Georgia, serif; --sheet-sans: Arial, Helvetica, sans-serif; --ink: .25px; }
   .sheet {
     width:210mm; min-height:297mm; margin:0 auto; background:#fff;
     padding:10mm 11mm; box-shadow:0 2px 12px #aaa;
@@ -270,14 +270,15 @@
   .sheet h2 { font-family:var(--sheet-font); color:#a87e2f; font-size:13pt; font-weight:bold; text-align:center; margin:3mm 0 1.8mm; white-space:nowrap; line-height:1.2; }
   .sheet td, .sheet th { border:1px solid #000 !important; padding:2px 4px; box-sizing:border-box; }
   .sheet table { border-collapse:collapse; width:100%; table-layout:fixed; border:1px solid #000 !important; }
+  .sheet td { -webkit-text-stroke: var(--ink) currentColor; }
   .info { font-size:11pt; margin-bottom:5.15mm; }
   .info td { height:4.65mm; padding:0 6px; vertical-align:middle; line-height:1.05; }
   .info b, .leaders b { font-weight:normal; }
   .info .f { display:inline-block; min-width:28mm; line-height:1.1; background:linear-gradient(#000,#000) left 0 bottom .4mm / 100% 1px no-repeat; }
   .sheet .roster { width:89.4%; margin-left:6.4%; }
-  .roster th { background:#242424; color:#fff; font-size:8.5pt; height:8.5mm; text-align:center; padding:2px 1px; word-break:normal; overflow-wrap:normal; }
+  .roster th { background:#242424; color:#fff; font-size:8.5pt; height:8.5mm; text-align:center; padding:1px; line-height:1.2; word-break:normal; overflow-wrap:normal; }
   .roster td { height:8.5mm; font-family:var(--sheet-sans); font-size:10.2pt; line-height:1.2; padding:1px 3px; }
-  .roster .num { font-family:var(--sheet-font); text-align:center; font-size:9pt; }
+  .roster .num { font-family:var(--sheet-font); text-align:center; font-size:9pt; -webkit-text-stroke:.15px currentColor; }
   .roster td[contenteditable="true"] { outline:none; }
   .roster td:focus, [contenteditable="true"]:focus { background:#fff8d9; outline:1px dashed #999; }
   .roster .name { padding-left:3mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1076,9 +1077,9 @@
           <!-- Tabella Giocatori (Roster) -->
           <table class="roster">
             <thead><tr>
-              <th style="width:5.1%">N°</th><th style="width:10%">MAGLIA</th>
-              <th style="width:54.5%">COGNOME E NOME</th><th style="width:19.3%">DATA NASCITA</th>
-              <th style="width:6.2%">GOL</th><th style="width:6.9%">ASSIST</th>
+              <th style="width:5.1%">N°</th><th style="width:6.9%">MAG<br>LIA</th>
+              <th style="width:55.7%">COGNOME E NOME</th><th style="width:19.3%">DATA NASCITA</th>
+              <th style="width:6.3%">GOL</th><th style="width:6.7%">ASSIS<br>T</th>
             </tr></thead>
             <tbody id="pdf-table-giocatori-body"></tbody>
           </table>
