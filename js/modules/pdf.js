@@ -152,10 +152,6 @@ function svuotaCampiDistinta() {
 // -------------------------------------------------------------
 let currentZoomScale = 1.0;
 
-function initZoom() {
-  currentZoomScale = window.innerWidth <= 600 ? 0.55 : (window.innerWidth <= 840 ? 0.75 : 1.0);
-  applicaZoom();
-}
 
 function cambiaZoom(delta) {
   currentZoomScale = Math.round((currentZoomScale + delta) * 100) / 100;
@@ -164,16 +160,20 @@ function cambiaZoom(delta) {
   applicaZoom();
 }
 
+const A4_PX = 210 * 96 / 25.4; // ≈ 794px
+
+function initZoom() {
+  const wrap = document.querySelector('.a4-page-wrapper');
+  const disponibile = (wrap ? wrap.clientWidth : window.innerWidth) - 32;
+  currentZoomScale = Math.min(1, Math.round((disponibile / A4_PX) * 100) / 100);
+  applicaZoom();
+}
+
 function applicaZoom() {
   const paper = document.getElementById('distinta-paper');
   const label = document.getElementById('zoom-level-label');
-  if (paper) {
-    paper.style.transform = `scale(${currentZoomScale})`;
-    paper.style.transformOrigin = 'top center';
-  }
-  if (label) {
-    label.innerText = `${Math.round(currentZoomScale * 100)}%`;
-  }
+  if (paper) paper.style.zoom = currentZoomScale;
+  if (label) label.innerText = `${Math.round(currentZoomScale * 100)}%`;
 }
 
 
