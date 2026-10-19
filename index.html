@@ -178,53 +178,7 @@
         line-height: 1;
     }
     
-    /* Tabella principale compatta */
-    table.main-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    table.main-table th, table.main-table td {
-        border: 3px solid #000;
-        padding: 0 2px;
-        font-size: 9.5px;
-        vertical-align: middle;
-    }
-    table.main-table th {
-        font-weight: bold;
-        text-align: center;
-        height: 16px; /* Altezza fissa ridotta per le intestazioni */
-        background-color: #fff;
-        white-space: nowrap;
-    }
-    table.main-table td {
-        height: 12.5px; /* Altezza fissa rigorosa per ogni riga giocatore */
-        border: 3px solid #000;
-    }
-
-    /* Rimuove le doppie linee esterne */
-    table.main-table th:first-child, table.main-table td:first-child { border-left: none; }
-    table.main-table th:last-child, table.main-table td:last-child { border-right: none; }
-    table.main-table tr:last-child td { border-bottom: none; }
-
-  /* Colonne ripristinate esattamente come nel file originale (Foto 2) */
-    .col-ris { width: 15%; }
-    .col-num { width: 5%; }
-    .col-nome { width: 28%; }
-    .col-nascita { width: 16%; }
-    .col-cap { width: 12%; }
-    .col-doc { width: 24%; }
-
-    /* Separatore nero spesso centrale (10a riga) */
-    table.main-table tr.thick-row td {
-        border-bottom: 5px solid #000;
-    }
-
-    /* BOX 2: Risultato e Note più compatti */
-    .box-notes {
-        border: 3px solid #000;
-        margin-bottom: 10px; /* Ridotto lo spazio */
-    }
-    
+        
     .result-line {
         padding: 6px 10px;
         font-weight: bold;
@@ -368,15 +322,16 @@
       font-size: 13pt;
       margin: 3mm 0 2mm;
   }
+  .sheet td, .sheet th {
+      border: 2px solid #000 !important;
+      padding: 2px 4px;
+      box-sizing: border-box;
+  }
   .sheet table {
       border-collapse: collapse;
       width: 100%;
       table-layout: fixed;
-  }
-  .sheet td, .sheet th {
-      border: 1px solid #555 !important;
-      padding: 2px 5px;
-      box-sizing: border-box;
+      border: 2px solid #000 !important;
   }
   .info {
       font-family: Georgia, serif;
@@ -1219,31 +1174,31 @@
           </div>
 
           <!-- Tabella Info Gara -->
-          <table class="info" style="width:100%; border-collapse:collapse; margin-bottom:5mm; font-family:Georgia, serif; font-size:10pt;">
+          <table class="info" style="width:100%; border-collapse:collapse; margin-bottom:4mm; font-family:Georgia, serif; font-size:9.5pt; border: 2px solid #000;">
             <tr>
-              <td style="width: 12%; border:none !important;"><b>CASA:</b></td>
-              <td style="width: 38%; border-bottom: 1px solid #000 !important; border-top:none; border-left:none; border-right:none;" contenteditable="true" id="pdf-casa-name"></td>
-              <td style="width: 15%; border:none !important;"><b>DATA:</b></td>
-              <td style="width: 35%; border-bottom: 1px solid #000 !important; border-top:none; border-left:none; border-right:none;" contenteditable="true" id="pdf-data-text"></td>
+              <td style="width: 12%; border: 2px solid #000; padding: 3px;"><b>CASA:</b></td>
+              <td style="width: 38%; border: 2px solid #000; padding: 3px;" contenteditable="true" id="pdf-casa-name"></td>
+              <td style="width: 15%; border: 2px solid #000; padding: 3px;"><b>DATA:</b></td>
+              <td style="width: 35%; border: 2px solid #000; padding: 3px;" contenteditable="true" id="pdf-data-text"></td>
             </tr>
             <tr>
-              <td style="border:none !important;"><b>F.CASA:</b></td>
-              <td style="border-bottom: 1px solid #000 !important; border-top:none; border-left:none; border-right:none;" contenteditable="true" id="pdf-fcasa-name"></td>
-              <td style="border:none !important;"><b>ORA:</b></td>
-              <td style="border-bottom: 1px solid #000 !important; border-top:none; border-left:none; border-right:none;" contenteditable="true" id="pdf-ora-text"></td>
+              <td style="border: 2px solid #000; padding: 3px;"><b>F.CASA:</b></td>
+              <td style="border: 2px solid #000; padding: 3px;" contenteditable="true" id="pdf-fcasa-name"></td>
+              <td style="border: 2px solid #000; padding: 3px;"><b>ORA:</b></td>
+              <td style="border: 2px solid #000; padding: 3px;" contenteditable="true" id="pdf-ora-text"></td>
             </tr>
           </table>
 
           <!-- Tabella Giocatori (Roster) -->
-          <table class="roster" style="width:100%; border-collapse:collapse;">
+          <table class="roster" style="width:100%; border-collapse:collapse; border: 2px solid #000;">
             <thead>
-              <tr>
-                <th style="width: 6%;">N°</th>
-                <th style="width: 10%;">MAGLIA</th>
-                <th style="width: 44%;">COGNOME E NOME</th>
-                <th style="width: 20%;">DATA NASCITA</th>
-                <th style="width: 10%;">GOL</th>
-                <th style="width: 10%;">ASSIST</th>
+              <tr style="background: #222; color: #fff; height: 9mm;">
+                <th style="width: 6%; border: 2px solid #000;">N°</th>
+                <th style="width: 10%; border: 2px solid #000;">MAGLIA</th>
+                <th style="width: 44%; border: 2px solid #000;">COGNOME E NOME</th>
+                <th style="width: 20%; border: 2px solid #000;">DATA NASCITA</th>
+                <th style="width: 10%; border: 2px solid #000;">GOL</th>
+                <th style="width: 10%; border: 2px solid #000;">ASSIST</th>
               </tr>
             </thead>
             <tbody id="pdf-table-giocatori-body">
