@@ -60,7 +60,9 @@
         color: #000;
         transform-origin: top center;
         box-sizing: border-box;
-        flex-shrink: 0; /* Impedisce al foglio di deformarsi o spezzarsi */
+        flex-shrink: 0;
+        position: relative; /* Fondamentale per bloccare gli elementi assoluti all'interno */
+        overflow: hidden;   /* Impedisce ai contenuti di sbordare fuori dal foglio */
     }
     @media screen and (max-width: 840px) {
         .a4-page {
@@ -314,8 +316,8 @@
   .strikethrough-line {
     position: absolute;
     top: 50%;
-    left: -40px; /* Estende la linea da prima del nome */
-    right: -180px; /* Estende la linea su tutta la riga fino a gol/assist */
+    left: 0;
+    right: 0;
     height: 2px;
     background-color: #000;
     pointer-events: none;
