@@ -175,3 +175,6 @@ function applicaZoom() {
     label.innerText = `${Math.round(currentZoomScale * 100)}%`;
   }
 }
+
+
+
