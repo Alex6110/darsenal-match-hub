@@ -25,6 +25,9 @@
 
 <!-- Flatpickr per Calendario e Orologio Moderni -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caladea:wght@400;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://npmcdn.com/flatpickr/dist/l10n/it.js"></script>
   <style>
@@ -32,7 +35,7 @@
    /* Configurazione Stampa A4 con i margini originali corretti */
     @page {
         size: A4 portrait;
-        margin: 10mm 14mm;
+        margin: 10mm 11mm;
     }
     * {
         box-sizing: border-box;
@@ -227,27 +230,20 @@
     .col-staff-nome { width: 45%; }
     .col-staff-doc { width: 30%; }
 
-    /* FIRME IN BASSO */
-    .signatures {
-        display: flex;
-        justify-content: space-between;
-        padding: 0 10px;
-        font-weight: bold;
-        font-size: 9.5px;
-    }
+    
     .select-text {
-    -webkit-user-select: text;
-    user-select: text;
-  }
-  /* Stile per sbarrare i giocatori non convocati/assenti */
-  .row-sbarrata input {
-    color: #94a3b8 !important; /* Testo leggermente opaco */
-  }
-
-  .a4-page table {
-        table-layout: fixed;
-        word-break: break-word;
+      -webkit-user-select: text;
+      user-select: text;
     }
+    /* Stile per sbarrare i giocatori non convocati/assenti */
+    .row-sbarrata input {
+      color: #94a3b8 !important; /* Testo leggermente opaco */
+    }
+
+    .a4-page table {
+          table-layout: fixed;
+          word-break: break-word;
+      }
 
     .strikethrough-line {
         position: absolute;
@@ -262,152 +258,38 @@
     }
 
     /* Stili specifici per la Distinta A4 (isolati da Tailwind) */
-  :root { --sheet-font: Arial, Helvetica, sans-serif; }
+  :root { --sheet-font: Caladea, Cambria, Georgia, serif; --sheet-sans: Arial, Helvetica, sans-serif; }
   .sheet {
-    width: 210mm; 
-    min-height: 297mm; 
-    margin: 0 auto; 
-    background: #fff;
-    padding: 10mm 14mm; 
-    box-shadow: 0 2px 12px #aaa;
-    box-sizing: border-box; 
-    position: relative; 
-    font-family: var(--sheet-font);
+    width:210mm; min-height:297mm; margin:0 auto; background:#fff;
+    padding:10mm 11mm; box-shadow:0 2px 12px #aaa;
+    box-sizing:border-box; position:relative; font-family:var(--sheet-font);
   }
-  .brand { 
-    height: 24mm; 
-    display:flex; 
-    align-items:center; 
-    justify-content:space-between; 
-    padding:0 12mm; 
-    margin-bottom:1mm; 
-  }
-  .brand img {
-      width: 20mm;
-      height: 20mm;
-      object-fit: contain;
-  }
-  .sheet h1 { 
-    font-family:var(--sheet-font); 
-    color:#0078bd; 
-    font-size:15pt; 
-    font-weight:bold; 
-    text-align:center; 
-    margin:0; 
-    white-space:nowrap; 
-    line-height:1.2; 
-  }
-  .sheet h2 { 
-    font-family:var(--sheet-font); 
-    color:#b58100; 
-    font-size:10.5pt; 
-    font-weight:bold; 
-    text-align:center; 
-    margin:1mm 0 3mm; 
-    white-space:nowrap; 
-    line-height:1.2; 
-  }
-  .sheet td, .sheet th { 
-    border:1px solid #000 !important; 
-    padding:2px 4px; 
-    box-sizing:border-box; 
-  }
-  .sheet table { 
-    border-collapse:collapse; 
-    width:100%; 
-    table-layout:fixed; 
-    border:1.5px solid #000 !important; 
-  }
-  .info { 
-    font-size:9.5pt; 
-    margin-bottom:3mm; 
-  }
-  .info td { 
-    height:7mm; 
-    padding:2px 6px; 
-    vertical-align:middle; 
-  }
-  .info .f { 
-    display:inline-block; 
-    min-width:28mm; 
-    border-bottom:1px solid #000; 
-    line-height:1.2; 
-  }
-  .roster th { 
-    background:#222; 
-    color:#fff; 
-    font-size:8.5pt; 
-    height:7.5mm; 
-    text-align:center; 
-  }
-  .roster td {
-      height: 7.5mm; /* Caselle più basse e compatte come nell'originale */
-      font-size: 9.5pt;
-      line-height: 1.2;
-      padding: 1px 3px;
-  }
-  .roster .num {
-      text-align: center;
-      font-size: 9pt;
-  }
-  .roster td[contenteditable="true"] {
-      outline: none;
-  }
-  .roster td:focus, [contenteditable="true"]:focus {
-      background: #fff8d9;
-      outline: 1px dashed #999;
-  }
-  .roster .name {
-      padding-left: 3mm;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-  }
-  .roster tr {
-    break-inside: avoid; /* Evita che le righe vengano spezzate tra le pagine */
-  }
-  .leaders-title { 
-    color:#b58100; 
-    font-weight:bold; 
-    text-align:center; 
-    margin:2mm 0 1mm; 
-    font-size:9.5pt; 
-  }
-  .leaders { 
-    margin-bottom:3mm; 
-  }
-  .leaders td { 
-    height:7mm; 
-    border:none !important; 
-    padding:0 3mm; 
-    font-size:9pt; 
-    white-space:nowrap; 
-  }
-  .uline { 
-    display:inline-block; 
-    width:calc(100% - 7mm); 
-    border-bottom:1px solid #000; 
-    line-height:1.2; 
-    vertical-align:bottom; 
-  }
-  .signatures {
-      display: flex;
-      justify-content: space-around;
-      text-align: center;
-      font-family: var(--sheet-font);
-      font-size: 9pt;
-      font-weight: bold;
-      margin-top: 1mm;
-  }
-  .sign {
-      width: 35%;
-  }
-  .line {
-      height: 8mm;
-      border-bottom: 1px solid #000;
-      margin-top: 1mm;
-      font-weight: normal;
-  }
+  .brand { height:24mm; display:flex; align-items:center; justify-content:space-between; padding:0 20mm; margin-bottom:1mm; }
+  .brand img { width:20mm; height:20mm; object-fit:contain; }
+  .sheet h1 { font-family:var(--sheet-font); color:#357db8; font-size:16pt; font-weight:bold; text-align:center; margin:0; white-space:nowrap; line-height:1.2; }
+  .sheet h2 { font-family:var(--sheet-font); color:#a87e2f; font-size:12pt; font-weight:bold; text-align:center; margin:2.5mm 0 1.8mm; white-space:nowrap; line-height:1.2; }
+  .sheet td, .sheet th { border:1px solid #000 !important; padding:2px 4px; box-sizing:border-box; }
+  .sheet table { border-collapse:collapse; width:100%; table-layout:fixed; border:1px solid #000 !important; }
+  .info { font-size:10pt; margin-bottom:5.4mm; }
+  .info td { height:4.6mm; padding:0 6px; vertical-align:middle; line-height:1.15; }
+  .info b, .leaders b { font-weight:normal; }
+  .info .f { display:inline-block; min-width:28mm; border-bottom:1px solid #000; line-height:1.1; }
+  .sheet .roster { width:89.4%; margin-left:6.4%; }
+  .roster th { background:#242424; color:#fff; font-size:8pt; height:8.8mm; text-align:center; padding:2px 1px; word-break:normal; overflow-wrap:normal; }
+  .roster td { height:8.5mm; font-family:var(--sheet-sans); font-size:10pt; line-height:1.2; padding:1px 3px; }
+  .roster .num { font-family:var(--sheet-font); text-align:center; font-size:8pt; }
+  .roster td[contenteditable="true"] { outline:none; }
+  .roster td:focus, [contenteditable="true"]:focus { background:#fff8d9; outline:1px dashed #999; }
+  .roster .name { padding-left:3mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .roster tr { break-inside:avoid; }
+  .leaders-title { color:#a87e2f; font-weight:bold; text-align:center; margin:0 0 1.2mm; font-size:10pt; line-height:1.2; }
+  .leaders { margin-bottom:0; }
+  .leaders td { height:4.6mm; border:none !important; padding:0 2mm; font-size:10pt; line-height:1.15; white-space:nowrap; }
+  .leaders td + td { border-left:1px solid #000 !important; }
+  .uline { display:inline-block; width:calc(100% - 7mm); border-bottom:1px solid #000; line-height:1.1; vertical-align:bottom; }
+  .signatures { display:flex; justify-content:center; gap:19.4mm; text-align:center; font-family:var(--sheet-font); font-size:10pt; font-weight:bold; margin-top:.5mm; line-height:1.2; }
+  .sign { width:36.5mm; }
+  .line { height:4.4mm; border-bottom:1px solid #000; margin-top:0; font-weight:normal; }
   
 </style>
 
@@ -1194,9 +1076,9 @@
           <!-- Tabella Giocatori (Roster) -->
           <table class="roster">
             <thead><tr>
-              <th style="width:6%">N°</th><th style="width:10%">MAGLIA</th>
-              <th style="width:44%">COGNOME E NOME</th><th style="width:20%">DATA NASCITA</th>
-              <th style="width:10%">GOL</th><th style="width:10%">ASSIST</th>
+              <th style="width:5.1%">N°</th><th style="width:10%">MAGLIA</th>
+              <th style="width:54.5%">COGNOME E NOME</th><th style="width:19.3%">DATA NASCITA</th>
+              <th style="width:6.2%">GOL</th><th style="width:6.9%">ASSIST</th>
             </tr></thead>
             <tbody id="pdf-table-giocatori-body"></tbody>
           </table>
@@ -1210,15 +1092,9 @@
             </tr>
           </table>
 
-          <div class="signatures" style="display:flex; justify-content:space-between; text-align:center; font-family:var(--sheet-font); font-size:8.5pt; font-weight:bold; margin-top:2mm;">
-            <div class="sign" style="width:40%;">
-              FIRMA DIRIGENTE
-              <div class="line" style="height:8mm; border-bottom:1.5px solid #000; margin-top:1mm;"></div>
-            </div>
-            <div class="sign" style="width:40%;">
-              FIRMA ARBITRO
-              <div class="line" style="height:8mm; border-bottom:1.5px solid #000; margin-top:1mm;"></div>
-            </div>
+          <div class="signatures">
+            <div class="sign">FIRMA DIRIGENTE<div class="line"></div></div>
+            <div class="sign">FIRMA ARBITRO<div class="line"></div></div>
           </div>
 
         </main>
