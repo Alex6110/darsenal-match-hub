@@ -252,12 +252,18 @@ function renderCampoFormazione() {
     const isSelected = giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'scale-110 z-30' : '';
 
     return `
-      <div onclick="gestisciClickGiocatore(${pos.id}, 'titolare')" class="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer transition-all duration-300 ${isSelected}" style="top: ${pos.top}; left: ${pos.left};">
-        <div class="${giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'ring-4 ring-amber-400 rounded-xl animate-pulse' : ''}">
-          ${generaIconaMaglia(giocatore.numero, pos.isPortiere)}
+        <div draggable="true" 
+            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${pos.id}, tipo: 'titolare'}))"
+            ondragover="event.preventDefault()"
+            ondrop="event.preventDefault(); gestisciDropGiocatore(${pos.id}, 'titolare')"
+            onclick="gestisciClickGiocatore(${pos.id}, 'titolare')" 
+            class="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer transition-all duration-300 transform ${isSelected}" 
+            style="top: ${pos.top}; left: ${pos.left};">
+            <div class="${giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'ring-4 ring-amber-400 rounded-xl animate-pulse' : ''}">
+            ${generaIconaMaglia(giocatore.numero, pos.isPortiere)}
+            </div>
+            <span class="mt-1 bg-slate-900/85 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap shadow-sm border border-white/10">${giocatore.nome}</span>
         </div>
-        <span class="mt-1 bg-slate-900/85 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap shadow-sm border border-white/10">${giocatore.nome}</span>
-      </div>
     `;
   }).join('');
 
@@ -267,13 +273,18 @@ function renderCampoFormazione() {
     riserveContainer.innerHTML = riserveLista.map((ris, index) => {
       const isSelected = giocatoreSelezionato && giocatoreSelezionato.indexRiserva === index ? 'ring-2 ring-amber-400 bg-amber-50' : 'bg-slate-50';
       return `
-        <div onclick="gestisciClickGiocatore(${index}, 'riserva')" class="flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all ${isSelected}">
-          <div class="w-9 h-9 flex items-center justify-center">
+        <div draggable="true"
+            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${index}, tipo: 'riserva'}))"
+            ondragover="event.preventDefault()"
+            ondrop="event.preventDefault(); gestisciDropGiocatore(${index}, 'riserva')"
+            onclick="gestisciClickGiocatore(${index}, 'riserva')" 
+            class="flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all duration-300 transform ${isSelected}">
+            <div class="w-9 h-9 flex items-center justify-center">
             ${generaIconaMaglia(ris.numero, false)}
-          </div>
-          <span class="text-xs font-bold text-slate-800 text-center mt-1 truncate w-full">${ris.nome}</span>
+            </div>
+            <span class="text-xs font-bold text-slate-800 text-center mt-1 truncate w-full">${ris.nome}</span>
         </div>
-      `;
+     `;
     }).join('');
   }
 }
@@ -354,4 +365,13 @@ window.gestisciClickGiocatore = function(id, tipo) {
     rimuoviGhostIcona();
     renderCampoFormazione();
   }
+};
+
+window.gestisciDropGiocatore = function(targetId, targetTipo) {
+  const data = event.dataTransfer.getData('text/plain');
+  if (!data) return;
+  const source = JSON.parse(data);
+
+  giocatoreSelezionato = source.tipo === 'titolare' ? { id: source.id, tipo: 'titolare' } : { indexRiserva: source.id, tipo: 'riserva' };
+  gestisciClickGiocatore(targetId, targetTipo);
 };

@@ -487,13 +487,17 @@
         </div>
 
         <!-- Pulsante Abilitazione Spostamento (Versione Web) -->
-        <div id="admin-formazione-controls" class="hidden">
+        <div id="admin-formazione-controls" class="hidden flex items-center gap-2">
           <button id="btn-toggle-spostamento" onclick="toggleModalitaSpostamento()" class="px-3.5 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs shadow-md flex items-center gap-2 transition-all">
             <svg id="icon-lock-spostamento" class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             <span id="text-lock-spostamento">Blocca Spostamento</span>
           </button>
-          <button onclick="salvaFormazioneSuSupabase()" class="px-3.5 py-2 bg-burgundy text-white font-bold rounded-xl text-xs shadow-md flex items-center gap-1.5 hover:bg-burgundy-dark transition-all">
-            💾 Salva
+          <button onclick="salvaFormazioneSuSupabase()" class="p-2.5 bg-burgundy hover:bg-burgundy-dark text-white rounded-xl shadow-md transition-all flex items-center justify-center" title="Salva Formazione">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
           </button>
         </div>
       </div>
