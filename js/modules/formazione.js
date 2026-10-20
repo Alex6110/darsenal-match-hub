@@ -169,8 +169,7 @@ function generaIconaMaglia(numero, isPortiere = false) {
   return `
     <div class="relative w-11 h-11 flex items-center justify-center filter drop-shadow-md transition-transform duration-200">
       <svg class="w-full h-full" viewBox="0 0 100 100" fill="${fillColor}" stroke="#ffffff" stroke-width="3">
-        <path d="M30 15 L42 22 L58 22 L70 15 L86 28 L73 40 L70 88 L30 88 L27 40 L14 28 Z" stroke-linejoin="round"/>
-        <path d="M46 22 L46 88 M54 22 L54 88" stroke="rgba(255,255,255,0.25)" stroke-width="3"/>
+        <path d="M32 15 L43 18 L57 18 L68 15 L86 27 L73 40 L70 88 L30 88 L27 40 L14 27 Z" stroke-linejoin="round"/>
       </svg>
       <span class="absolute inset-0 flex items-center justify-center font-black text-xs pt-1 text-white">${numero}</span>
     </div>
