@@ -6,6 +6,7 @@ let riserveLista = [];
 let menuRiserveAperto = false;
 let spostamentoAbilitato = false;
 let giocatoreSelezionato = null;
+let partitaCorrenteId = null;
 
 const COORDINATE_MODULI = {
   '2-3-1': [
@@ -35,6 +36,42 @@ const COORDINATE_MODULI = {
     { id: 5, ruolo: 'Attaccante', top: '16%', left: '35%' },
     { id: 6, ruolo: 'Attaccante', top: '16%', left: '65%' }
   ]
+};
+
+
+// Funzione aptica universale per vibrazione
+function triggerHaptic(duration = 40) {
+  if (navigator.vibrate) {
+    navigator.vibrate(duration);
+  }
+}
+
+// Funzione per salvare la formazione su Supabase
+window.salvaFormazioneSuSupabase = async function() {
+  if (typeof isAdmin !== 'undefined' && !isAdmin) {
+    return mostraAlert("Solo l'amministratore può salvare la formazione.");
+  }
+  if (!partitaCorrenteId) {
+    return mostraAlert("Nessuna partita attiva trovata.");
+  }
+
+  const payload = {
+    id_partita: partitaCorrenteId,
+    modulo: moduloAttivo,
+    titolari: formazioneTitolari,
+    riserve: riserveLista,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await db.from('formazioni_partite').upsert(payload, { onConflict: 'id_partita' });
+  
+  if (error) {
+    console.error("Errore salvataggio formazione:", error);
+    if (typeof mostraAlert === 'function') mostraAlert("Errore durante il salvataggio.");
+  } else {
+    triggerHaptic([30, 50, 30]);
+    if (typeof mostraAlert === 'function') mostraAlert("Formazione salvata con successo! Ora tutti vedranno queste modifiche.");
+  }
 };
 
 window.apriSezioneFormazione = function() {
@@ -97,10 +134,10 @@ window.toggleModalitaSpostamento = function() {
   }
 };
 
+// Modifica a caricaDatiFormazione per leggere prima la tabella formati_partite
 async function caricaDatiFormazione() {
   const adesso = new Date().toISOString();
 
-  // Cerca prioritariamente la prossima partita futura
   let { data: partiteFuture } = await db.from('partite')
     .select('*')
     .gte('data_ora', adesso)
@@ -109,7 +146,6 @@ async function caricaDatiFormazione() {
 
   let partitaCorrente = partiteFuture && partiteFuture.length > 0 ? partiteFuture[0] : null;
 
-  // Se non ci sono partite future, prendi l'ultima passata
   if (!partitaCorrente) {
     const { data: tuttePartite } = await db.from('partite')
       .select('*')
@@ -121,8 +157,27 @@ async function caricaDatiFormazione() {
   }
 
   if (!partitaCorrente) return;
-  
-  // Carica i giocatori che hanno votato "Presente" per questa specifica partita
+  partitaCorrenteId = partitaCorrente.id;
+
+  // 1. Controlla se esiste una formazione già salvata su Supabase
+  const { data: formazioneSalvata } = await db.from('formazioni_partite')
+    .select('*')
+    .eq('id_partita', partitaCorrenteId)
+    .single();
+
+  if (formazioneSalvata) {
+    moduloAttivo = formazioneSalvata.modulo || '2-3-1';
+    formazioneTitolari = formazioneSalvata.titolari || {};
+    riserveLista = formazioneSalvata.riserve || [];
+    
+    const display = document.getElementById('display-modulo-corrente');
+    if (display) display.innerText = moduloAttivo;
+    
+    renderCampoFormazione();
+    return;
+  }
+
+  // 2. Fallback: genera dai convocati "Presenti" se non è ancora stata salvata una formazione
   const { data: presenze } = await db.from('presenze')
     .select('*')
     .eq('id_partita', partitaCorrente.id)
@@ -223,6 +278,34 @@ function renderCampoFormazione() {
   }
 }
 
+// --- GESTIONE TRASCINAMENTO E HAPTIC FEEDBACK ---
+let ghostElement = null;
+
+function creaGhostIcona(numero, isPortiere, clientX, clientY) {
+  if (ghostElement) ghostElement.remove();
+  ghostElement = document.createElement('div');
+  ghostElement.className = 'fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 opacity-90 scale-125';
+  ghostElement.innerHTML = generaIconaMaglia(numero, isPortiere);
+  ghostElement.style.left = `${clientX}px`;
+  ghostElement.style.top = `${clientY}px`;
+  document.body.appendChild(ghostElement);
+}
+
+function muoviGhostIcona(clientX, clientY) {
+  if (ghostElement) {
+    ghostElement.style.left = `${clientX}px`;
+    ghostElement.style.top = `${clientY}px`;
+  }
+}
+
+function rimuoviGhostIcona() {
+  if (ghostElement) {
+    ghostElement.remove();
+    ghostElement = null;
+  }
+}
+
+// Gestione interazione al click / tocco sui giocatori in campo e panchina
 window.gestisciClickGiocatore = function(id, tipo) {
   if (typeof isAdmin !== 'undefined' && !isAdmin) {
     return mostraAlert("Solo l'amministratore può modificare la formazione in campo.");
@@ -230,7 +313,7 @@ window.gestisciClickGiocatore = function(id, tipo) {
 
   if (!spostamentoAbilitato) {
     spostamentoAbilitato = true;
-    if (navigator.vibrate) navigator.vibrate(30);
+    triggerHaptic(30);
     const btn = document.getElementById('btn-toggle-spostamento');
     const textEl = document.getElementById('text-lock-spostamento');
     const iconEl = document.getElementById('icon-lock-spostamento');
@@ -239,12 +322,16 @@ window.gestisciClickGiocatore = function(id, tipo) {
     if (iconEl) iconEl.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>';
   }
 
-  if (navigator.vibrate) navigator.vibrate(40);
+  // Vibrazione aptica alla selezione
+  triggerHaptic(40);
 
   if (!giocatoreSelezionato) {
     giocatoreSelezionato = tipo === 'titolare' ? { id, tipo } : { indexRiserva: id, tipo };
     renderCampoFormazione();
   } else {
+    // Vibrazione di arrivo / rilascio su un altro giocatore
+    triggerHaptic([30, 30]);
+
     if (giocatoreSelezionato.tipo === 'titolare' && tipo === 'titolare') {
       const temp = formazioneTitolari[giocatoreSelezionato.id];
       formazioneTitolari[giocatoreSelezionato.id] = formazioneTitolari[id];
@@ -264,6 +351,7 @@ window.gestisciClickGiocatore = function(id, tipo) {
     }
 
     giocatoreSelezionato = null;
+    rimuoviGhostIcona();
     renderCampoFormazione();
   }
 };
