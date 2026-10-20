@@ -469,6 +469,64 @@
 
       <div id="sondaggi-container" class="w-full space-y-4 flex flex-col items-center pb-12"></div>
     </section>
+
+    <!-- VISTA FORMAZIONE TATTICA -->
+    <section id="view-formazione" class="hidden space-y-4">
+      <div class="flex justify-between items-center mb-2">
+        <!-- Selettore Modulo -->
+        <div class="relative custom-select-wrapper">
+          <button type="button" onclick="toggleMenuFasi('modulo', event)" class="min-w-[140px] p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase text-burgundy flex justify-between items-center shadow-sm">
+            <span id="display-modulo-corrente">2-3-1</span>
+            <svg class="w-4 h-4 text-slate-400 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+          <div id="menu-fasi-modulo" class="hidden absolute left-0 w-full min-w-[140px] mt-1 bg-white border border-slate-100 rounded-xl shadow-xl z-30 divide-y divide-slate-50">
+            <div onclick="cambiaModulo('2-3-1')" class="p-3 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">2-3-1</div>
+            <div onclick="cambiaModulo('3-2-1')" class="p-3 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">3-2-1</div>
+            <div onclick="cambiaModulo('3-1-2')" class="p-3 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">3-1-2</div>
+          </div>
+        </div>
+
+        <!-- Pulsante Abilitazione Spostamento (Versione Web) -->
+        <div id="admin-formazione-controls" class="hidden">
+          <button id="btn-toggle-spostamento" onclick="toggleModalitaSpostamento()" class="px-3 py-2 bg-slate-800 text-white font-bold rounded-xl text-xs shadow-md">
+            🔒 Blocca Spostamento
+          </button>
+        </div>
+      </div>
+
+      <!-- Campo da Calcio a 7 & Cassetto Riserve -->
+      <div class="relative w-full aspect-[2/3] bg-emerald-600 rounded-3xl shadow-lg border-4 border-white overflow-hidden flex flex-col items-center justify-between p-4" id="campo-da-calcio">
+        <!-- Linee del campo -->
+        <div class="absolute inset-4 border-2 border-white/40 rounded-xl pointer-events-none"></div>
+        <div class="absolute top-1/2 left-0 right-0 h-0.5 bg-white/40 pointer-events-none"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/40 rounded-full pointer-events-none"></div>
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-b-2 border-x-2 border-white/40 rounded-b-xl pointer-events-none"></div>
+        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-t-2 border-x-2 border-white/40 rounded-t-xl pointer-events-none"></div>
+
+        <!-- Contenitore Giocatori Titolari in Campo -->
+        <div id="titolari-container" class="absolute inset-0 z-10">
+          <!-- Generato dinamicamente via JS in base al modulo -->
+        </div>
+
+        <!-- Pulsante Apri Riserve (In alto a destra del campo) -->
+        <button id="btn-apri-riserve" onclick="toggleMenuRiserve()" class="absolute top-3 right-3 z-20 w-9 h-9 bg-white/90 text-burgundy rounded-full shadow-md flex items-center justify-center hover:bg-white transition-transform">
+          <svg class="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+
+        <!-- Menu laterale Riserve (A scomparsa) -->
+        <div id="menu-riserve" class="absolute top-0 right-0 h-full w-48 bg-white/95 backdrop-blur-md shadow-2xl z-30 transform translate-x-full transition-transform duration-300 flex flex-col p-3 border-l border-slate-200">
+          <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+            <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Riserve (5)</span>
+            <button onclick="toggleMenuRiserve()" class="w-7 h-7 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center hover:bg-slate-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+          <div id="riserve-lista-container" class="space-y-2 overflow-y-auto flex-1 pr-1">
+            <!-- Generato via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- MODALE GESTIONE RISULTATO ED EVENTI MATCH -->
@@ -847,6 +905,12 @@
           <svg class="w-5 h-5 text-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
           <span class="font-bold text-xs text-burgundy uppercase tracking-wider">Info Tutti i Giocatori</span>
         </button>
+
+        <!-- VOCE FORMAZIONE -->
+        <button onclick="apriSezioneFormazione()" class="w-full py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center gap-2 transition-all">
+          <svg class="w-5 h-5 text-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-8v16m-7-13h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2z"/></svg>
+          <span class="font-bold text-xs text-burgundy uppercase tracking-wider">Formazione Tattica</span>
+        </button>
       </div>
     </div>
 
@@ -1151,6 +1215,7 @@
   <script src="js/modules/sondaggi.js"></script>
   <script src="js/modules/pdf.js"></script>
   <script src="js/modules/notifiche.js"></script>
+  <script src="js/modules/formazione.js"></script>
 
   <script src="js/app.js"></script>
 </body>
