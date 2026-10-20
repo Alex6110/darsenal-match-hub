@@ -1,11 +1,11 @@
 // js/modules/formazione.js
 
 let moduloAttivo = '2-3-1';
-let formazioneTitolari = {}; // Mappa posizioneIndex -> Giocatore
+let formazioneTitolari = {}; 
 let riserveLista = [];
 let menuRiserveAperto = false;
 let spostamentoAbilitato = false;
-let giocatoreSelezionato = null; // Per il tap-to-swap con animazione
+let giocatoreSelezionato = null;
 
 const COORDINATE_MODULI = {
   '2-3-1': [
@@ -70,11 +70,9 @@ window.toggleMenuRiserve = function() {
   if (menu) {
     if (menuRiserveAperto) {
       menu.classList.remove('translate-x-full');
-      // Quando il menu è aperto, la freccia punta fuori dal campo (0deg)
       if (iconBtn) iconBtn.classList.remove('rotate-180');
     } else {
       menu.classList.add('translate-x-full');
-      // Quando il menu è chiuso, la freccia punta verso il campo (180deg)
       if (iconBtn) iconBtn.classList.add('rotate-180');
     }
   }
@@ -100,21 +98,42 @@ window.toggleModalitaSpostamento = function() {
 };
 
 async function caricaDatiFormazione() {
-  // Prendi la partita più recente o attiva dal database
-  const { data: partite } = await db.from('partite').select('*').order('data_ora', { ascending: true });
-  if (!partite || partite.length === 0) return;
+  const adesso = new Date().toISOString();
 
-  const partitaCorrente = partite[0];
+  // Cerca prioritariamente la prossima partita futura
+  let { data: partiteFuture } = await db.from('partite')
+    .select('*')
+    .gte('data_ora', adesso)
+    .order('data_ora', { ascending: true })
+    .limit(1);
+
+  let partitaCorrente = partiteFuture && partiteFuture.length > 0 ? partiteFuture[0] : null;
+
+  // Se non ci sono partite future, prendi l'ultima passata
+  if (!partitaCorrente) {
+    const { data: tuttePartite } = await db.from('partite')
+      .select('*')
+      .order('data_ora', { ascending: false })
+      .limit(1);
+    if (tuttePartite && tuttePartite.length > 0) {
+      partitaCorrente = tuttePartite[0];
+    }
+  }
+
+  if (!partitaCorrente) return;
   
-  // Richiedi ESCLUSIVAMENTE i giocatori che hanno votato "Presente" nel sondaggio della partita
-  const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaCorrente.id).eq('stato', 'Presente');
+  // Carica i giocatori che hanno votato "Presente" per questa specifica partita
+  const { data: presenze } = await db.from('presenze')
+    .select('*')
+    .eq('id_partita', partitaCorrente.id)
+    .eq('stato', 'Presente');
 
   let convocatiNomi = (presenze || []).map(p => p.nome_utente);
 
-  // Mappa con i dati completi dei giocatori (numero maglia, ruolo, ecc.) presi dai mock/anagrafica
   let listaGiocatori = convocatiNomi.map(nome => {
-    const g = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []).find(item => 
-      (item.nome_completo || item.nome)?.toLowerCase() === nome.toLowerCase()
+    const anagrafica = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
+    const g = anagrafica.find(item => 
+      (item.nome_completo || item.nome)?.toLowerCase().trim() === nome.toLowerCase().trim()
     );
     return {
       nome,
@@ -123,7 +142,6 @@ async function caricaDatiFormazione() {
     };
   });
 
-  // Trova il portiere tra i convocati "Presente"
   let portiereObj = listaGiocatori.find(j => j.ruolo.toLowerCase().includes('portiere') || j.numero === 1);
   if (!portiereObj && listaGiocatori.length > 0) {
     portiereObj = listaGiocatori[0];
@@ -131,7 +149,6 @@ async function caricaDatiFormazione() {
     portiereObj.numero = 1;
   }
 
-  // Rimuovi il portiere dai movimenti di campo
   let outfield = listaGiocatori.filter(j => j !== portiereObj);
 
   formazioneTitolari = {};
@@ -139,27 +156,23 @@ async function caricaDatiFormazione() {
     formazioneTitolari[0] = { ...portiereObj, isPortiere: true };
   }
 
-  // Primi 6 titolari di movimento
   for (let i = 0; i < 6 && i < outfield.length; i++) {
     formazioneTitolari[i + 1] = outfield[i];
   }
 
-  // Restanti in riserva
   riserveLista = outfield.slice(6);
   renderCampoFormazione();
 }
 
-// Funzione helper per generare l'icona SVG della maglietta con numero (Migliorata e dettagliata)
 function generaIconaMaglia(numero, isPortiere = false) {
-  const fillColor = isPortiere ? '#0f172a' : '#5e2038'; // Portiere scuro, Giocatori bordeaux
-  const textColor = '#ffffff';
-
+  const fillColor = isPortiere ? '#0f172a' : '#5e2038';
   return `
     <div class="relative w-11 h-11 flex items-center justify-center filter drop-shadow-md transition-transform duration-200">
-      <svg class="w-full h-full" viewBox="0 0 100 100" fill="${fillColor}" stroke="#ffffff" stroke-width="3.5">
-        <path d="M32 15 L45 23 L55 23 L68 15 L85 28 L72 42 L72 85 L28 85 L28 42 L15 28 Z" stroke-linejoin="round"/>
+      <svg class="w-full h-full" viewBox="0 0 100 100" fill="${fillColor}" stroke="#ffffff" stroke-width="3">
+        <path d="M28 15 L42 20 L58 20 L72 15 L88 28 L75 40 L70 38 L70 88 L30 88 L30 38 L25 40 L12 28 Z" stroke-linejoin="round"/>
+        <path d="M42 20 L50 32 L58 20" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"/>
       </svg>
-      <span class="absolute inset-0 flex items-center justify-center font-black text-xs pt-1.5" style="color: ${textColor};">${numero}</span>
+      <span class="absolute inset-0 flex items-center justify-center font-black text-xs pt-1 text-white">${numero}</span>
     </div>
   `;
 }
@@ -171,14 +184,12 @@ function renderCampoFormazione() {
 
   if (!container || !riserveContainer) return;
 
-  // Aggiorna il numero esatto delle riserve nel titolo del cassetto
   if (labelTitoloRiserve) {
     labelTitoloRiserve.innerText = `Riserve (${riserveLista.length})`;
   }
 
   const posizioni = COORDINATE_MODULI[moduloAttivo] || COORDINATE_MODULI['2-3-1'];
 
-  // Render Titolari in Campo con Nome Sotto al fermaposto
   container.innerHTML = posizioni.map(pos => {
     const giocatore = formazioneTitolari[pos.id] || { nome: 'Vuoto', numero: '--', isPortiere: pos.isPortiere };
     const isSelected = giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'scale-110 z-30' : '';
@@ -193,7 +204,6 @@ function renderCampoFormazione() {
     `;
   }).join('');
 
-  // Render Riserve nel Cassetto Laterale (Nome sotto o a fianco dell'icona maglia)
   if (riserveLista.length === 0) {
     riserveContainer.innerHTML = `<div class="text-[11px] text-slate-400 text-center py-4 italic">Nessun giocatore in panchina</div>`;
   } else {
@@ -230,11 +240,9 @@ window.gestisciClickGiocatore = function(id, tipo) {
   if (navigator.vibrate) navigator.vibrate(40);
 
   if (!giocatoreSelezionato) {
-    // Primo click: seleziona
     giocatoreSelezionato = tipo === 'titolare' ? { id, tipo } : { indexRiserva: id, tipo };
     renderCampoFormazione();
   } else {
-    // Secondo click: esegui lo scambio (Swap) tra titolari e/o riserve
     if (giocatoreSelezionato.tipo === 'titolare' && tipo === 'titolare') {
       const temp = formazioneTitolari[giocatoreSelezionato.id];
       formazioneTitolari[giocatoreSelezionato.id] = formazioneTitolari[id];
