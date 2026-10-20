@@ -509,15 +509,15 @@
           <!-- Generato dinamicamente via JS in base al modulo -->
         </div>
 
-        <!-- Pulsante Apri Riserve (In alto a destra del campo) -->
+        <!-- Pulsante Apri Riserve (In alto a destra del campo) - Freccia ruotata verso il campo (180deg) di default -->
         <button id="btn-apri-riserve" onclick="toggleMenuRiserve()" class="absolute top-3 right-3 z-20 w-9 h-9 bg-white/90 text-burgundy rounded-full shadow-md flex items-center justify-center hover:bg-white transition-transform">
-          <svg class="w-5 h-5 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          <svg id="icon-btn-riserve" class="w-5 h-5 transform rotate-180 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
         </button>
 
         <!-- Menu laterale Riserve (A scomparsa) -->
         <div id="menu-riserve" class="absolute top-0 right-0 h-full w-48 bg-white/95 backdrop-blur-md shadow-2xl z-30 transform translate-x-full transition-transform duration-300 flex flex-col p-3 border-l border-slate-200">
           <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-            <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Riserve (5)</span>
+            <span id="label-titolo-riserve" class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Riserve (0)</span>
             <button onclick="toggleMenuRiserve()" class="w-7 h-7 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center hover:bg-slate-200">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
             </button>

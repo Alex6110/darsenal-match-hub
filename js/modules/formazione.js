@@ -65,9 +65,18 @@ window.cambiaModulo = function(modulo) {
 window.toggleMenuRiserve = function() {
   menuRiserveAperto = !menuRiserveAperto;
   const menu = document.getElementById('menu-riserve');
+  const iconBtn = document.getElementById('icon-btn-riserve');
+
   if (menu) {
-    if (menuRiserveAperto) menu.classList.remove('translate-x-full');
-    else menu.classList.add('translate-x-full');
+    if (menuRiserveAperto) {
+      menu.classList.remove('translate-x-full');
+      // Quando il menu è aperto, la freccia punta fuori dal campo (0deg)
+      if (iconBtn) iconBtn.classList.remove('rotate-180');
+    } else {
+      menu.classList.add('translate-x-full');
+      // Quando il menu è chiuso, la freccia punta verso il campo (180deg)
+      if (iconBtn) iconBtn.classList.add('rotate-180');
+    }
   }
 };
 
@@ -91,21 +100,18 @@ window.toggleModalitaSpostamento = function() {
 };
 
 async function caricaDatiFormazione() {
-  // Prendi la partita / sondaggio torneo più recente con presenze registrate
+  // Prendi la partita più recente o attiva dal database
   const { data: partite } = await db.from('partite').select('*').order('data_ora', { ascending: true });
   if (!partite || partite.length === 0) return;
 
   const partitaCorrente = partite[0];
+  
+  // Richiedi ESCLUSIVAMENTE i giocatori che hanno votato "Presente" nel sondaggio della partita
   const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaCorrente.id).eq('stato', 'Presente');
 
   let convocatiNomi = (presenze || []).map(p => p.nome_utente);
-  
-  // Se non ci sono presenze registrate nel DB per questa partita, usa i giocatori dal modulo dati/mock
-  if (convocatiNomi.length === 0 && typeof GIOCATORI_MOCK !== 'undefined') {
-    convocatiNomi = GIOCATORI_MOCK.map(g => g.nome_completo || g.nome);
-  }
 
-  // Mappa con i dati completi dei giocatori (numero maglia, ruolo, ecc.)
+  // Mappa con i dati completi dei giocatori (numero maglia, ruolo, ecc.) presi dai mock/anagrafica
   let listaGiocatori = convocatiNomi.map(nome => {
     const g = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []).find(item => 
       (item.nome_completo || item.nome)?.toLowerCase() === nome.toLowerCase()
@@ -117,7 +123,7 @@ async function caricaDatiFormazione() {
     };
   });
 
-  // Trova il portiere tra i convocati
+  // Trova il portiere tra i convocati "Presente"
   let portiereObj = listaGiocatori.find(j => j.ruolo.toLowerCase().includes('portiere') || j.numero === 1);
   if (!portiereObj && listaGiocatori.length > 0) {
     portiereObj = listaGiocatori[0];
@@ -143,17 +149,17 @@ async function caricaDatiFormazione() {
   renderCampoFormazione();
 }
 
-// Funzione helper per generare l'icona SVG della maglietta con numero
+// Funzione helper per generare l'icona SVG della maglietta con numero (Migliorata e dettagliata)
 function generaIconaMaglia(numero, isPortiere = false) {
-  const fillColor = isPortiere ? '#0f172a' : '#5e2038';
+  const fillColor = isPortiere ? '#0f172a' : '#5e2038'; // Portiere scuro, Giocatori bordeaux
   const textColor = '#ffffff';
 
   return `
     <div class="relative w-11 h-11 flex items-center justify-center filter drop-shadow-md transition-transform duration-200">
-      <svg class="w-full h-full" viewBox="0 0 100 100" fill="${fillColor}" stroke="#ffffff" stroke-width="4">
-        <path d="M30 15 L50 25 L70 15 L85 30 L70 45 L70 85 L30 85 L30 45 L15 30 Z" stroke-linejoin="round"/>
+      <svg class="w-full h-full" viewBox="0 0 100 100" fill="${fillColor}" stroke="#ffffff" stroke-width="3.5">
+        <path d="M32 15 L45 23 L55 23 L68 15 L85 28 L72 42 L72 85 L28 85 L28 42 L15 28 Z" stroke-linejoin="round"/>
       </svg>
-      <span class="absolute inset-0 flex items-center justify-center font-black text-xs pt-1" style="color: ${textColor};">${numero}</span>
+      <span class="absolute inset-0 flex items-center justify-center font-black text-xs pt-1.5" style="color: ${textColor};">${numero}</span>
     </div>
   `;
 }
@@ -161,11 +167,18 @@ function generaIconaMaglia(numero, isPortiere = false) {
 function renderCampoFormazione() {
   const container = document.getElementById('titolari-container');
   const riserveContainer = document.getElementById('riserve-lista-container');
+  const labelTitoloRiserve = document.getElementById('label-titolo-riserve');
+
   if (!container || !riserveContainer) return;
+
+  // Aggiorna il numero esatto delle riserve nel titolo del cassetto
+  if (labelTitoloRiserve) {
+    labelTitoloRiserve.innerText = `Riserve (${riserveLista.length})`;
+  }
 
   const posizioni = COORDINATE_MODULI[moduloAttivo] || COORDINATE_MODULI['2-3-1'];
 
-  // Render Titolari in Campo con Nome Sotto
+  // Render Titolari in Campo con Nome Sotto al fermaposto
   container.innerHTML = posizioni.map(pos => {
     const giocatore = formazioneTitolari[pos.id] || { nome: 'Vuoto', numero: '--', isPortiere: pos.isPortiere };
     const isSelected = giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'scale-110 z-30' : '';
@@ -180,18 +193,18 @@ function renderCampoFormazione() {
     `;
   }).join('');
 
-  // Render Riserve nel Cassetto Laterale con Icona Maglia
+  // Render Riserve nel Cassetto Laterale (Nome sotto o a fianco dell'icona maglia)
   if (riserveLista.length === 0) {
-    riserveContainer.innerHTML = `<div class="text-[11px] text-slate-400 text-center py-4 italic">Nessuna riserva disponibile</div>`;
+    riserveContainer.innerHTML = `<div class="text-[11px] text-slate-400 text-center py-4 italic">Nessun giocatore in panchina</div>`;
   } else {
     riserveContainer.innerHTML = riserveLista.map((ris, index) => {
       const isSelected = giocatoreSelezionato && giocatoreSelezionato.indexRiserva === index ? 'ring-2 ring-amber-400 bg-amber-50' : 'bg-slate-50';
       return `
-        <div onclick="gestisciClickGiocatore(${index}, 'riserva')" class="flex items-center gap-2.5 p-2 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all ${isSelected}">
-          <div class="w-8 h-8 shrink-0 flex items-center justify-center scale-75 origin-left">
+        <div onclick="gestisciClickGiocatore(${index}, 'riserva')" class="flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all ${isSelected}">
+          <div class="w-9 h-9 flex items-center justify-center">
             ${generaIconaMaglia(ris.numero, false)}
           </div>
-          <span class="text-xs font-bold text-slate-800 truncate">${ris.nome}</span>
+          <span class="text-xs font-bold text-slate-800 text-center mt-1 truncate w-full">${ris.nome}</span>
         </div>
       `;
     }).join('');
@@ -221,7 +234,7 @@ window.gestisciClickGiocatore = function(id, tipo) {
     giocatoreSelezionato = tipo === 'titolare' ? { id, tipo } : { indexRiserva: id, tipo };
     renderCampoFormazione();
   } else {
-    // Secondo click: esegui lo scambio animato (Swap) tra titolari e/o riserve
+    // Secondo click: esegui lo scambio (Swap) tra titolari e/o riserve
     if (giocatoreSelezionato.tipo === 'titolare' && tipo === 'titolare') {
       const temp = formazioneTitolari[giocatoreSelezionato.id];
       formazioneTitolari[giocatoreSelezionato.id] = formazioneTitolari[id];
