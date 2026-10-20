@@ -9,7 +9,7 @@
   <!-- Supabase e PDF-lib -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 
   <script>
     tailwind.config = {
@@ -288,11 +288,9 @@
   .roster td:focus, [contenteditable="true"]:focus { background:#fff8d9; outline:1px dashed #999; }
   .roster .name { padding-left:3mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .roster tr { break-inside:avoid; }
-  .roster tr.assente td { background-image:linear-gradient(#000,#000); background-repeat:no-repeat; background-position:center; background-size:100% 1px; }
-  .pdf-capture .f, .pdf-capture .uline { background:none !important; position:relative; }
-  .pdf-capture .f::after, .pdf-capture .uline::after { content:""; position:absolute; left:0; right:0; bottom:.4mm; height:1px; background:#000; }
-  .pdf-capture tr.assente td { background:none !important; position:relative; }
-  .pdf-capture tr.assente td::after { content:""; position:absolute; left:0; right:0; top:50%; height:1px; background:#000; }
+  .roster tr.assente td { background-image:linear-gradient(#dc2626,#dc2626); background-repeat:no-repeat; background-position:0 50%; background-size:100% 1px; }
+  .roster tr.assente td:first-child { background-position:1.5mm 50%; background-size:calc(100% - 1.5mm) 1px; }
+  .roster tr.assente td:last-child  { background-position:0 50%; background-size:calc(100% - 1.5mm) 1px; }
   .leaders-title { color:#a87e2f; font-weight:bold; text-align:center; margin:0 0 1.4mm; font-size:10.2pt; line-height:1.2; }
   .leaders { margin-bottom:0; }
   .leaders td { height:4.65mm; border:none !important; padding:0 2mm; font-size:11pt; line-height:1.05; white-space:nowrap; }
