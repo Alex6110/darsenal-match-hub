@@ -70,10 +70,10 @@ window.toggleMenuRiserve = function() {
   if (menu) {
     if (menuRiserveAperto) {
       menu.classList.remove('translate-x-full');
-      if (iconBtn) iconBtn.classList.remove('rotate-180');
+      if (iconBtn) iconBtn.classList.add('rotate-180');
     } else {
       menu.classList.add('translate-x-full');
-      if (iconBtn) iconBtn.classList.add('rotate-180');
+      if (iconBtn) iconBtn.classList.remove('rotate-180');
     }
   }
 };
