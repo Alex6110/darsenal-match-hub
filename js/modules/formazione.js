@@ -40,27 +40,27 @@ const COORDINATE_MODULI = {
 
 
 // --- FEEDBACK TATTILE (Android + iPhone) ---
-// Android/Chrome: Vibration API. iOS non la implementa (nessun browser iOS, PWA compresa): su iPhone
-// uso il trucco dell'interruttore <input type="checkbox" switch> (Safari/PWA iOS 17.4+), che fa
-// partire il "tick" di sistema quando viene attivato da un gesto dell'utente.
+// Android/Chrome: Vibration API (navigator.vibrate).
+// iPhone/iPad: iOS non ha la Vibration API e ignora i "tick" avviati da codice. Il tick di sistema parte
+// solo se il DITO tocca davvero un interruttore vero (<input type="checkbox" switch>, iOS 17.4+).
+// Quindi su iOS mettiamo un interruttore vero e invisibile (opacity 0) SOTTO il dito, sopra ogni
+// pedina e ogni pulsante della Formazione: il tocco è vero e iOS fa il tick.
 const HA_VIBRATE = typeof navigator.vibrate === 'function';
-let _hapticLabel = null;
+const HAPTIC_SW_HTML = HA_VIBRATE ? '' : '<input type="checkbox" switch class="haptic-sw" tabindex="-1" aria-hidden="true">';
+const TATTILE_SU_PULSANTI = true;     // false = niente interruttore invisibile sui pulsanti (solo sulle pedine)
 
 function triggerHaptic(pattern = 40) {
-  try {
-    if (HA_VIBRATE) { navigator.vibrate(pattern); return; }
-    if (!_hapticLabel) {
-      _hapticLabel = document.createElement('label');
-      _hapticLabel.setAttribute('aria-hidden', 'true');
-      _hapticLabel.style.display = 'none';
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.setAttribute('switch', '');
-      _hapticLabel.appendChild(input);
-      document.head.appendChild(_hapticLabel);
-    }
-    _hapticLabel.click();
-  } catch (e) { /* nessun feedback disponibile: si va avanti senza */ }
+  try { if (HA_VIBRATE) navigator.vibrate(pattern); } catch (e) { /* nessuna vibrazione disponibile */ }
+}
+
+// iOS: aggiunge l'interruttore invisibile ai pulsanti della sezione (idempotente)
+function initTattileIOS() {
+  if (HA_VIBRATE || !TATTILE_SU_PULSANTI) return;
+  document.querySelectorAll('#view-formazione button').forEach((btn) => {
+    if (btn.querySelector('.haptic-sw')) return;
+    if (getComputedStyle(btn).position === 'static') btn.style.position = 'relative';
+    btn.insertAdjacentHTML('beforeend', HAPTIC_SW_HTML);
+  });
 }
 
 // Funzione per salvare la formazione su Supabase
@@ -258,6 +258,7 @@ function renderCampoFormazione() {
 
   if (!container || !riserveContainer) return;
   initDragFormazione();
+  initTattileIOS();
 
   if (labelTitoloRiserve) {
     labelTitoloRiserve.innerText = `Riserve (${riserveLista.length})`;
@@ -274,6 +275,7 @@ function renderCampoFormazione() {
             data-id="${pos.id}" data-tipo="titolare" data-numero="${giocatore.numero}" data-nome="${String(giocatore.nome).replace(/"/g, '&quot;')}" data-portiere="${pos.isPortiere ? 1 : 0}"
             onclick="clickPedina(${pos.id}, 'titolare')"
             style="top: ${pos.top}; left: ${pos.left};">
+            ${HAPTIC_SW_HTML}
             <div class="${giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'ring-4 ring-amber-400 rounded-xl animate-pulse' : ''}">
             ${generaIconaMaglia(giocatore.numero, pos.isPortiere)}
             </div>
@@ -288,9 +290,10 @@ function renderCampoFormazione() {
     riserveContainer.innerHTML = riserveLista.map((ris, index) => {
       const isSelected = giocatoreSelezionato && giocatoreSelezionato.indexRiserva === index ? 'ring-2 ring-amber-400 bg-amber-50' : 'bg-slate-50';
       return `
-        <div class="pedina-formazione flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all duration-300 transform ${isSelected}"
+        <div class="pedina-formazione relative flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all duration-300 transform ${isSelected}"
             data-id="${index}" data-tipo="riserva" data-numero="${ris.numero}" data-nome="${String(ris.nome).replace(/"/g, '&quot;')}" data-portiere="0"
             onclick="clickPedina(${index}, 'riserva')">
+            ${HAPTIC_SW_HTML}
             <div class="w-9 h-9 flex items-center justify-center">
             ${generaIconaMaglia(ris.numero, false)}
             </div>
@@ -369,8 +372,6 @@ function onPedinaDown(e) {
   window.addEventListener('pointercancel', onPedinaCancel);
 
   if (touch) {
-    // iPhone: tick subito al tocco (è sicuramente dentro un gesto, a differenza del timer)
-    if (!HA_VIBRATE) triggerHaptic(10);
     dragState.timer = setTimeout(attivaDrag, LONG_PRESS_MS);
   }
 }
