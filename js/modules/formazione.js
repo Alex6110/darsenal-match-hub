@@ -46,7 +46,10 @@ const COORDINATE_MODULI = {
 // Quindi su iOS mettiamo un interruttore vero e invisibile (opacity 0) SOTTO il dito, sopra ogni
 // pedina e ogni pulsante della Formazione: il tocco è vero e iOS fa il tick.
 const HA_VIBRATE = typeof navigator.vibrate === 'function';
-const HAPTIC_SW_HTML = HA_VIBRATE ? '' : '<input type="checkbox" switch class="haptic-sw" tabindex="-1" aria-hidden="true">';
+// stile inline = funziona anche se il CSS dell'index non c'è o la PWA ha una versione vecchia in cache
+const HAPTIC_SW_HTML = HA_VIBRATE ? '' :
+  '<input type="checkbox" switch class="haptic-sw" tabindex="-1" aria-hidden="true" ' +
+  'style="position:absolute;left:0;top:0;width:100%;height:100%;margin:0;opacity:0;z-index:5;">';
 const TATTILE_SU_PULSANTI = true;     // false = niente interruttore invisibile sui pulsanti (solo sulle pedine)
 
 function triggerHaptic(pattern = 40) {
@@ -62,6 +65,22 @@ function initTattileIOS() {
     btn.insertAdjacentHTML('beforeend', HAPTIC_SW_HTML);
   });
 }
+
+// CSS della sezione Formazione iniettato da qui: non serve più aggiungerlo all'index.html
+(function iniettaCssFormazione() {
+  if (document.getElementById('formazione-css')) return;
+  const st = document.createElement('style');
+  st.id = 'formazione-css';
+  st.textContent = `
+    .pedina-formazione { touch-action:none; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+    .pedina-sollevata { opacity:.35; }
+    .pedina-target { outline:3px solid #fbbf24; outline-offset:3px; border-radius:14px; }
+    .pedina-ghost { position:fixed; left:0; top:0; z-index:9999; pointer-events:none; display:flex; flex-direction:column; align-items:center; }
+    .pedina-ghost-nome { margin-top:4px; background:rgba(15,23,42,.9); color:#fff; font-size:9px; font-weight:700; padding:2px 8px; border-radius:6px; white-space:nowrap; }
+    .haptic-sw { position:absolute; left:0; top:0; width:100%; height:100%; margin:0; opacity:0; z-index:5; }
+  `;
+  document.head.appendChild(st);
+})();
 
 // Funzione per salvare la formazione su Supabase
 window.salvaFormazioneSuSupabase = async function() {
