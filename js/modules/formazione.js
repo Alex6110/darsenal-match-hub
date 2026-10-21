@@ -253,8 +253,8 @@ function renderCampoFormazione() {
 
     return `
         <div draggable="true" 
-            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${pos.id}, tipo: 'titolare'}))"
-            ondragover="event.preventDefault()"
+            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${pos.id}, tipo: 'titolare'})); triggerHaptic(35);"
+            ondragover="gestisciDragOverGiocatore(event, ${pos.id}, 'titolare')"
             ondrop="event.preventDefault(); gestisciDropGiocatore(${pos.id}, 'titolare')"
             onclick="gestisciClickGiocatore(${pos.id}, 'titolare')" 
             class="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer transition-all duration-300 transform ${isSelected}" 
@@ -274,8 +274,8 @@ function renderCampoFormazione() {
       const isSelected = giocatoreSelezionato && giocatoreSelezionato.indexRiserva === index ? 'ring-2 ring-amber-400 bg-amber-50' : 'bg-slate-50';
       return `
         <div draggable="true"
-            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${index}, tipo: 'riserva'}))"
-            ondragover="event.preventDefault()"
+            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${index}, tipo: 'riserva'})); triggerHaptic(35);"
+            ondragover="gestisciDragOverGiocatore(event, ${index}, 'riserva')"
             ondrop="event.preventDefault(); gestisciDropGiocatore(${index}, 'riserva')"
             onclick="gestisciClickGiocatore(${index}, 'riserva')" 
             class="flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all duration-300 transform ${isSelected}">
@@ -333,15 +333,13 @@ window.gestisciClickGiocatore = function(id, tipo) {
     if (iconEl) iconEl.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>';
   }
 
-  // Vibrazione aptica alla selezione
-  triggerHaptic(40);
-
   if (!giocatoreSelezionato) {
     giocatoreSelezionato = tipo === 'titolare' ? { id, tipo } : { indexRiserva: id, tipo };
+    triggerHaptic(35); // 1. Vibrazione iniziale al tenere premuto / selezionare il giocatore
     renderCampoFormazione();
   } else {
-    // Vibrazione di arrivo / rilascio su un altro giocatore
-    triggerHaptic([30, 30]);
+    // 3. Vibrazione di rilascio / interscambio completato tra i due giocatori
+    triggerHaptic([40, 60, 40]);
 
     if (giocatoreSelezionato.tipo === 'titolare' && tipo === 'titolare') {
       const temp = formazioneTitolari[giocatoreSelezionato.id];
@@ -362,6 +360,7 @@ window.gestisciClickGiocatore = function(id, tipo) {
     }
 
     giocatoreSelezionato = null;
+    ultimoTargetId = null;
     rimuoviGhostIcona();
     renderCampoFormazione();
   }
@@ -373,5 +372,18 @@ window.gestisciDropGiocatore = function(targetId, targetTipo) {
   const source = JSON.parse(data);
 
   giocatoreSelezionato = source.tipo === 'titolare' ? { id: source.id, tipo: 'titolare' } : { indexRiserva: source.id, tipo: 'riserva' };
+  ultimoTargetId = null;
   gestisciClickGiocatore(targetId, targetTipo);
+};
+
+let ultimoTargetId = null;
+
+// Funzione per gestire la vibrazione al passaggio sopra un altro giocatore
+window.gestisciDragOverGiocatore = function(event, id, tipo) {
+  event.preventDefault();
+  const targetKey = `${tipo}-${id}`;
+  if (ultimoTargetId !== targetKey) {
+    ultimoTargetId = targetKey;
+    triggerHaptic(20); // Vibrazione leggera al passaggio sopra un altro giocatore
+  }
 };
