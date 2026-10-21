@@ -264,41 +264,48 @@
 
     /* Stili specifici per la Distinta A4 (isolati da Tailwind) */
     :root { --sheet-font: Caladea, Cambria, Georgia, serif; --sheet-sans: Arial, Helvetica, sans-serif; --ink: .25px; }
-  .sheet {
-    width:210mm; min-height:297mm; margin:0 auto; background:#fff;
-    padding:10mm 11mm; box-shadow:0 2px 12px #aaa;
-    box-sizing:border-box; position:relative; font-family:var(--sheet-font);
-  }
-  .brand { height:24mm; display:flex; align-items:center; justify-content:space-between; padding:0 20mm; margin-bottom:1mm; }
-  .brand img { width:20mm; height:20mm; object-fit:contain; }
-  .sheet h1 { font-family:var(--sheet-font); color:#357db8; font-size:17pt; font-weight:bold; text-align:center; margin:0; white-space:nowrap; line-height:1.2; }
-  .sheet h2 { font-family:var(--sheet-font); color:#a87e2f; font-size:13pt; font-weight:bold; text-align:center; margin:3mm 0 1.8mm; white-space:nowrap; line-height:1.2; }
-  .sheet td, .sheet th { border:1px solid #000 !important; padding:2px 4px; box-sizing:border-box; }
-  .sheet table { border-collapse:collapse; width:100%; table-layout:fixed; border:1px solid #000 !important; }
-  .sheet td { -webkit-text-stroke: var(--ink) currentColor; }
-  .info { font-size:11pt; margin-bottom:5.15mm; }
-  .info td { height:4.65mm; padding:0 6px; vertical-align:middle; line-height:1.05; }
-  .info b, .leaders b { font-weight:normal; }
-  .info .f { display:inline-block; min-width:28mm; line-height:1.1; background:linear-gradient(#000,#000) left 0 bottom .4mm / 100% 1px no-repeat; }
-  .sheet .roster { width:89.4%; margin-left:6.4%; }
-  .roster th { background:#242424; color:#fff; font-size:8.5pt; height:8.5mm; text-align:center; padding:1px; line-height:1.2; word-break:normal; overflow-wrap:normal; }
-  .roster td { height:8.5mm; font-family:var(--sheet-sans); font-size:10.2pt; line-height:1.2; padding:1px 3px; }
-  .roster .num { font-family:var(--sheet-font); text-align:center; font-size:9pt; -webkit-text-stroke:.15px currentColor; }
-  .roster td[contenteditable="true"] { outline:none; }
-  .roster td:focus, [contenteditable="true"]:focus { background:#fff8d9; outline:1px dashed #999; }
-  .roster .name { padding-left:3mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .roster tr { break-inside:avoid; }
-  .roster tr.assente td { background-image:linear-gradient(#dc2626,#dc2626); background-repeat:no-repeat; background-position:0 50%; background-size:100% 1px; }
-  .roster tr.assente td:first-child { background-position:1.5mm 50%; background-size:calc(100% - 1.5mm) 1px; }
-  .roster tr.assente td:last-child  { background-position:0 50%; background-size:calc(100% - 1.5mm) 1px; }
-  .leaders-title { color:#a87e2f; font-weight:bold; text-align:center; margin:0 0 1.4mm; font-size:10.2pt; line-height:1.2; }
-  .leaders { margin-bottom:0; }
-  .leaders td { height:4.65mm; border:none !important; padding:0 2mm; font-size:11pt; line-height:1.05; white-space:nowrap; }
-  .leaders td + td { border-left:1px solid #000 !important; }
-  .uline { display:inline-block; width:60mm; line-height:1.1; vertical-align:bottom; background:linear-gradient(#000,#000) left 0 bottom .4mm / 100% 1px no-repeat; }
-  .signatures { display:flex; justify-content:center; gap:19.4mm; text-align:center; font-family:var(--sheet-font); font-size:10pt; font-weight:bold; margin-top:-.1mm; line-height:1.2; }
-  .sign { width:36.5mm; }
-  .line { height:5.25mm; border-bottom:1px solid #000; margin-top:0; font-weight:normal; }
+    .sheet {
+      width:210mm; min-height:297mm; margin:0 auto; background:#fff;
+      padding:10mm 11mm; box-shadow:0 2px 12px #aaa;
+      box-sizing:border-box; position:relative; font-family:var(--sheet-font);
+    }
+    .brand { height:24mm; display:flex; align-items:center; justify-content:space-between; padding:0 20mm; margin-bottom:1mm; }
+    .brand img { width:20mm; height:20mm; object-fit:contain; }
+    .sheet h1 { font-family:var(--sheet-font); color:#357db8; font-size:17pt; font-weight:bold; text-align:center; margin:0; white-space:nowrap; line-height:1.2; }
+    .sheet h2 { font-family:var(--sheet-font); color:#a87e2f; font-size:13pt; font-weight:bold; text-align:center; margin:3mm 0 1.8mm; white-space:nowrap; line-height:1.2; }
+    .sheet td, .sheet th { border:1px solid #000 !important; padding:2px 4px; box-sizing:border-box; }
+    .sheet table { border-collapse:collapse; width:100%; table-layout:fixed; border:1px solid #000 !important; }
+    .sheet td { -webkit-text-stroke: var(--ink) currentColor; }
+    .info { font-size:11pt; margin-bottom:5.15mm; }
+    .info td { height:4.65mm; padding:0 6px; vertical-align:middle; line-height:1.05; }
+    .info b, .leaders b { font-weight:normal; }
+    .info .f { display:inline-block; min-width:28mm; line-height:1.1; background:linear-gradient(#000,#000) left 0 bottom .4mm / 100% 1px no-repeat; }
+    .sheet .roster { width:89.4%; margin-left:6.4%; }
+    .roster th { background:#242424; color:#fff; font-size:8.5pt; height:8.5mm; text-align:center; padding:1px; line-height:1.2; word-break:normal; overflow-wrap:normal; }
+    .roster td { height:8.5mm; font-family:var(--sheet-sans); font-size:10.2pt; line-height:1.2; padding:1px 3px; }
+    .roster .num { font-family:var(--sheet-font); text-align:center; font-size:9pt; -webkit-text-stroke:.15px currentColor; }
+    .roster td[contenteditable="true"] { outline:none; }
+    .roster td:focus, [contenteditable="true"]:focus { background:#fff8d9; outline:1px dashed #999; }
+    .roster .name { padding-left:3mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .roster tr { break-inside:avoid; }
+    .roster tr.assente td { background-image:linear-gradient(#dc2626,#dc2626); background-repeat:no-repeat; background-position:0 50%; background-size:100% 1px; }
+    .roster tr.assente td:first-child { background-position:1.5mm 50%; background-size:calc(100% - 1.5mm) 1px; }
+    .roster tr.assente td:last-child  { background-position:0 50%; background-size:calc(100% - 1.5mm) 1px; }
+    .leaders-title { color:#a87e2f; font-weight:bold; text-align:center; margin:0 0 1.4mm; font-size:10.2pt; line-height:1.2; }
+    .leaders { margin-bottom:0; }
+    .leaders td { height:4.65mm; border:none !important; padding:0 2mm; font-size:11pt; line-height:1.05; white-space:nowrap; }
+    .leaders td + td { border-left:1px solid #000 !important; }
+    .uline { display:inline-block; width:60mm; line-height:1.1; vertical-align:bottom; background:linear-gradient(#000,#000) left 0 bottom .4mm / 100% 1px no-repeat; }
+    .signatures { display:flex; justify-content:center; gap:19.4mm; text-align:center; font-family:var(--sheet-font); font-size:10pt; font-weight:bold; margin-top:-.1mm; line-height:1.2; }
+    .sign { width:36.5mm; }
+    .line { height:5.25mm; border-bottom:1px solid #000; margin-top:0; font-weight:normal; }
+
+      /* FORMAZIONE: trascinamento con pointer events */
+    .pedina-formazione { touch-action:none; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+    .pedina-sollevata { opacity:.35; }
+    .pedina-target { outline:3px solid #fbbf24; outline-offset:3px; border-radius:14px; }
+    .pedina-ghost { position:fixed; left:0; top:0; z-index:9999; pointer-events:none; display:flex; flex-direction:column; align-items:center; }
+    .pedina-ghost-nome { margin-top:4px; background:rgba(15,23,42,.9); color:#fff; font-size:9px; font-weight:700; padding:2px 8px; border-radius:6px; white-space:nowrap; }
   
 </style>
 

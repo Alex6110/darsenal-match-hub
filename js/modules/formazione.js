@@ -39,11 +39,28 @@ const COORDINATE_MODULI = {
 };
 
 
-// Funzione aptica universale per vibrazione
-function triggerHaptic(duration = 40) {
-  if (navigator.vibrate) {
-    navigator.vibrate(duration);
-  }
+// --- FEEDBACK TATTILE (Android + iPhone) ---
+// Android/Chrome: Vibration API. iOS non la implementa (nessun browser iOS, PWA compresa): su iPhone
+// uso il trucco dell'interruttore <input type="checkbox" switch> (Safari/PWA iOS 17.4+), che fa
+// partire il "tick" di sistema quando viene attivato da un gesto dell'utente.
+const HA_VIBRATE = typeof navigator.vibrate === 'function';
+let _hapticLabel = null;
+
+function triggerHaptic(pattern = 40) {
+  try {
+    if (HA_VIBRATE) { navigator.vibrate(pattern); return; }
+    if (!_hapticLabel) {
+      _hapticLabel = document.createElement('label');
+      _hapticLabel.setAttribute('aria-hidden', 'true');
+      _hapticLabel.style.display = 'none';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.setAttribute('switch', '');
+      _hapticLabel.appendChild(input);
+      document.head.appendChild(_hapticLabel);
+    }
+    _hapticLabel.click();
+  } catch (e) { /* nessun feedback disponibile: si va avanti senza */ }
 }
 
 // Funzione per salvare la formazione su Supabase
@@ -117,7 +134,7 @@ window.toggleMenuRiserve = function() {
 
 window.toggleModalitaSpostamento = function() {
   spostamentoAbilitato = !spostamentoAbilitato;
-  if (navigator.vibrate) navigator.vibrate(30);
+  triggerHaptic(30);
 
   const iconEl = document.getElementById('icon-lock-spostamento');
   const textEl = document.getElementById('text-lock-spostamento');
@@ -240,6 +257,7 @@ function renderCampoFormazione() {
   const labelTitoloRiserve = document.getElementById('label-titolo-riserve');
 
   if (!container || !riserveContainer) return;
+  initDragFormazione();
 
   if (labelTitoloRiserve) {
     labelTitoloRiserve.innerText = `Riserve (${riserveLista.length})`;
@@ -252,12 +270,9 @@ function renderCampoFormazione() {
     const isSelected = giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'scale-110 z-30' : '';
 
     return `
-        <div draggable="true" 
-            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${pos.id}, tipo: 'titolare'})); triggerHaptic(35);"
-            ondragover="gestisciDragOverGiocatore(event, ${pos.id}, 'titolare')"
-            ondrop="event.preventDefault(); gestisciDropGiocatore(${pos.id}, 'titolare')"
-            onclick="gestisciClickGiocatore(${pos.id}, 'titolare')" 
-            class="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer transition-all duration-300 transform ${isSelected}" 
+        <div class="pedina-formazione absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer transition-all duration-300 transform ${isSelected}"
+            data-id="${pos.id}" data-tipo="titolare" data-numero="${giocatore.numero}" data-nome="${String(giocatore.nome).replace(/"/g, '&quot;')}" data-portiere="${pos.isPortiere ? 1 : 0}"
+            onclick="clickPedina(${pos.id}, 'titolare')"
             style="top: ${pos.top}; left: ${pos.left};">
             <div class="${giocatoreSelezionato && giocatoreSelezionato.id === pos.id ? 'ring-4 ring-amber-400 rounded-xl animate-pulse' : ''}">
             ${generaIconaMaglia(giocatore.numero, pos.isPortiere)}
@@ -273,12 +288,9 @@ function renderCampoFormazione() {
     riserveContainer.innerHTML = riserveLista.map((ris, index) => {
       const isSelected = giocatoreSelezionato && giocatoreSelezionato.indexRiserva === index ? 'ring-2 ring-amber-400 bg-amber-50' : 'bg-slate-50';
       return `
-        <div draggable="true"
-            ondragstart="event.dataTransfer.setData('text/plain', JSON.stringify({id: ${index}, tipo: 'riserva'})); triggerHaptic(35);"
-            ondragover="gestisciDragOverGiocatore(event, ${index}, 'riserva')"
-            ondrop="event.preventDefault(); gestisciDropGiocatore(${index}, 'riserva')"
-            onclick="gestisciClickGiocatore(${index}, 'riserva')" 
-            class="flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all duration-300 transform ${isSelected}">
+        <div class="pedina-formazione flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 cursor-pointer hover:bg-slate-100 transition-all duration-300 transform ${isSelected}"
+            data-id="${index}" data-tipo="riserva" data-numero="${ris.numero}" data-nome="${String(ris.nome).replace(/"/g, '&quot;')}" data-portiere="0"
+            onclick="clickPedina(${index}, 'riserva')">
             <div class="w-9 h-9 flex items-center justify-center">
             ${generaIconaMaglia(ris.numero, false)}
             </div>
@@ -289,23 +301,44 @@ function renderCampoFormazione() {
   }
 }
 
-// --- GESTIONE TRASCINAMENTO E HAPTIC FEEDBACK ---
-let ghostElement = null;
+// --- TRASCINAMENTO CON POINTER EVENTS (stesso codice per iPhone, Android e sito) ---
+// Non usiamo il drag & drop HTML5: su iOS mostra la sua anteprima di sistema (rettangolo scuro + "+")
+// e non si può personalizzare. Qui il giocatore "sollevato" è un nostro elemento che segue il dito.
+const LONG_PRESS_MS = 350;      // tocco: tieni premuto 350ms per sollevare il giocatore
+const MOVE_TOLERANCE = 10;      // px: se il dito si muove prima, non è un tocco lungo
+const MOUSE_DRAG_START = 4;     // px: sito, con "Spostamento attivo" il drag parte dopo questo movimento
 
-function creaGhostIcona(numero, isPortiere, clientX, clientY) {
-  if (ghostElement) ghostElement.remove();
+let ghostElement = null;
+let dragState = null;
+let dragTarget = null;
+let bloccaClickFinoA = 0;
+let ultimoTargetId = null;
+
+function initDragFormazione() {
+  const campo = document.getElementById('campo-da-calcio');
+  if (!campo || campo.dataset.dragInit) return;
+  campo.dataset.dragInit = '1';
+  campo.addEventListener('pointerdown', onPedinaDown);
+  campo.addEventListener('contextmenu', (e) => { if (e.target.closest('.pedina-formazione')) e.preventDefault(); });
+}
+
+function creaGhostIcona(dati, clientX, clientY) {
+  rimuoviGhostIcona();
   ghostElement = document.createElement('div');
-  ghostElement.className = 'fixed pointer-events-none z-50 transform -translate-x-1/2 -translate-y-1/2 opacity-90 scale-125';
-  ghostElement.innerHTML = generaIconaMaglia(numero, isPortiere);
-  ghostElement.style.left = `${clientX}px`;
-  ghostElement.style.top = `${clientY}px`;
+  ghostElement.className = 'pedina-ghost';
+  ghostElement.innerHTML = generaIconaMaglia(dati.numero, dati.portiere);
+  const nome = document.createElement('span');
+  nome.className = 'pedina-ghost-nome';
+  nome.textContent = dati.nome;
+  ghostElement.appendChild(nome);
   document.body.appendChild(ghostElement);
+  muoviGhostIcona(clientX, clientY);
 }
 
 function muoviGhostIcona(clientX, clientY) {
   if (ghostElement) {
-    ghostElement.style.left = `${clientX}px`;
-    ghostElement.style.top = `${clientY}px`;
+    // sopra al dito, così non lo copre
+    ghostElement.style.transform = `translate3d(${clientX}px, ${clientY}px, 0) translate(-50%, -115%) scale(1.15)`;
   }
 }
 
@@ -315,6 +348,107 @@ function rimuoviGhostIcona() {
     ghostElement = null;
   }
 }
+
+function onPedinaDown(e) {
+  const el = e.target.closest('.pedina-formazione');
+  if (!el || dragState) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  if (typeof isAdmin !== 'undefined' && !isAdmin) return;      // i non admin non spostano (il tap mostra l'avviso)
+
+  const touch = e.pointerType !== 'mouse';
+  if (!touch && !spostamentoAbilitato) return;                  // sito: serve "Spostamento attivo"
+
+  dragState = {
+    el, touch, pointerId: e.pointerId, x0: e.clientX, y0: e.clientY, attivo: false, timer: null,
+    id: parseInt(el.dataset.id, 10), tipo: el.dataset.tipo,
+    dati: { numero: el.dataset.numero, nome: el.dataset.nome, portiere: el.dataset.portiere === '1' }
+  };
+
+  window.addEventListener('pointermove', onPedinaMove, { passive: false });
+  window.addEventListener('pointerup', onPedinaUp);
+  window.addEventListener('pointercancel', onPedinaCancel);
+
+  if (touch) {
+    // iPhone: tick subito al tocco (è sicuramente dentro un gesto, a differenza del timer)
+    if (!HA_VIBRATE) triggerHaptic(10);
+    dragState.timer = setTimeout(attivaDrag, LONG_PRESS_MS);
+  }
+}
+
+function attivaDrag() {
+  if (!dragState || dragState.attivo) return;
+  dragState.attivo = true;
+  clearTimeout(dragState.timer);
+  dragState.el.classList.add('pedina-sollevata');
+  creaGhostIcona(dragState.dati, dragState.x ?? dragState.x0, dragState.y ?? dragState.y0);
+  triggerHaptic(35);                                            // "sollevato"
+}
+
+function onPedinaMove(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  dragState.x = e.clientX; dragState.y = e.clientY;
+  const dist = Math.hypot(e.clientX - dragState.x0, e.clientY - dragState.y0);
+
+  if (!dragState.attivo) {
+    if (dragState.touch && dist > MOVE_TOLERANCE) return fineDrag();     // non era un tocco lungo
+    if (!dragState.touch && dist > MOUSE_DRAG_START) attivaDrag();
+    if (!dragState.attivo) return;
+  }
+
+  e.preventDefault();
+  muoviGhostIcona(e.clientX, e.clientY);
+
+  const sotto = document.elementFromPoint(e.clientX, e.clientY)?.closest('.pedina-formazione') || null;
+  const bersaglio = (sotto && sotto !== dragState.el) ? sotto : null;
+  if (bersaglio !== dragTarget) {
+    dragTarget?.classList.remove('pedina-target');
+    dragTarget = bersaglio;
+    if (dragTarget) {
+      dragTarget.classList.add('pedina-target');
+      triggerHaptic(15);                                        // passaggio sopra un altro giocatore
+    }
+  }
+}
+
+function onPedinaUp(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  const { attivo, id, tipo } = dragState;
+  const bersaglio = dragTarget;
+  fineDrag();
+  if (!attivo) return;                                          // era un tap: ci pensa onclick
+
+  bloccaClickFinoA = Date.now() + 400;                          // niente "click" fantasma dopo il rilascio
+  if (bersaglio) {
+    giocatoreSelezionato = tipo === 'titolare' ? { id, tipo } : { indexRiserva: id, tipo };
+    ultimoTargetId = null;
+    gestisciClickGiocatore(parseInt(bersaglio.dataset.id, 10), bersaglio.dataset.tipo);   // scambia + vibrazione + render
+  } else {
+    triggerHaptic(15);
+  }
+}
+
+function onPedinaCancel(e) {
+  if (dragState && e.pointerId === dragState.pointerId) fineDrag();
+}
+
+function fineDrag() {
+  if (!dragState) return;
+  clearTimeout(dragState.timer);
+  dragState.el.classList.remove('pedina-sollevata');
+  dragTarget?.classList.remove('pedina-target');
+  dragTarget = null;
+  rimuoviGhostIcona();
+  window.removeEventListener('pointermove', onPedinaMove);
+  window.removeEventListener('pointerup', onPedinaUp);
+  window.removeEventListener('pointercancel', onPedinaCancel);
+  dragState = null;
+}
+
+// Tap su un giocatore (selezione + secondo tap per scambiare): ignorato subito dopo un trascinamento
+window.clickPedina = function(id, tipo) {
+  if (Date.now() < bloccaClickFinoA) return;
+  gestisciClickGiocatore(id, tipo);
+};
 
 // Gestione interazione al click / tocco sui giocatori in campo e panchina
 window.gestisciClickGiocatore = function(id, tipo) {
@@ -363,27 +497,5 @@ window.gestisciClickGiocatore = function(id, tipo) {
     ultimoTargetId = null;
     rimuoviGhostIcona();
     renderCampoFormazione();
-  }
-};
-
-window.gestisciDropGiocatore = function(targetId, targetTipo) {
-  const data = event.dataTransfer.getData('text/plain');
-  if (!data) return;
-  const source = JSON.parse(data);
-
-  giocatoreSelezionato = source.tipo === 'titolare' ? { id: source.id, tipo: 'titolare' } : { indexRiserva: source.id, tipo: 'riserva' };
-  ultimoTargetId = null;
-  gestisciClickGiocatore(targetId, targetTipo);
-};
-
-let ultimoTargetId = null;
-
-// Funzione per gestire la vibrazione al passaggio sopra un altro giocatore
-window.gestisciDragOverGiocatore = function(event, id, tipo) {
-  event.preventDefault();
-  const targetKey = `${tipo}-${id}`;
-  if (ultimoTargetId !== targetKey) {
-    ultimoTargetId = targetKey;
-    triggerHaptic(20); // Vibrazione leggera al passaggio sopra un altro giocatore
   }
 };
