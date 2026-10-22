@@ -336,6 +336,82 @@ let dragTarget = null;
 let bloccaClickFinoA = 0;
 let ultimoTargetId = null;
 
+const RAGGIO_MAGNETICO = 44;       // px: vicino a un altro giocatore (oltre al suo rettangolo) scatta come bersaglio
+const ZONA_TATTILE_IOS = true;     // iPhone: tick quando entri nella zona di un altro giocatore (sperimentale)
+const SW_W = 3000, SW_H = 4000;    // dimensioni dell'interruttore "guida" durante il trascinamento (iPhone)
+
+// Bersagli possibili, calcolati una volta sola quando il giocatore viene sollevato:
+// solo i giocatori davvero visibili (non coperti dal menu riserve, non fuori dal campo)
+function preparaBersagli() {
+  dragState.bersagli = [];
+  document.querySelectorAll('#view-formazione .pedina-formazione').forEach((el) => {
+    if (el === dragState.el) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const sopra = document.elementsFromPoint(cx, cy)
+      .find((n) => !n.classList.contains('haptic-sw') && !n.classList.contains('pedina-ghost'));
+    if (sopra && sopra.closest('.pedina-formazione') === el) dragState.bersagli.push({ el, r });
+  });
+}
+
+// Il più vicino entro RAGGIO_MAGNETICO dal bordo del suo rettangolo (0 = dito dentro il rettangolo)
+function trovaBersaglio(x, y) {
+  let migliore = null, dMin = Infinity;
+  for (const b of (dragState.bersagli || [])) {
+    const dx = Math.max(b.r.left - x, 0, x - b.r.right);
+    const dy = Math.max(b.r.top - y, 0, y - b.r.bottom);
+    const d = Math.hypot(dx, dy);
+    if (d <= RAGGIO_MAGNETICO && d < dMin) { dMin = d; migliore = b.el; }
+  }
+  return migliore;
+}
+
+// iPhone: l'interruttore invisibile sotto il dito fa il tick quando il dito lo "attraversa" a metà.
+// Lo ingrandisco e lo sposto in modo che il centro sia sempre lontano dal dito; quando il dito entra
+// nella zona di un giocatore, porto il centro dall'altra parte del dito: per iOS è un attraversamento.
+function preparaSwitchDrag() {
+  if (HA_VIBRATE || !ZONA_TATTILE_IOS) return;
+  const sw = dragState.el.querySelector('.haptic-sw');
+  if (!sw) return;
+  dragState.sw = sw;
+  dragState.swStile = sw.getAttribute('style');
+  dragState.latoDestro = true;
+  posizionaSwitch(dragState.x ?? dragState.x0, dragState.y ?? dragState.y0);
+  const lista = document.getElementById('riserve-lista-container');
+  if (lista && lista.contains(dragState.el)) {            // evita che l'elemento grande faccia scorrere la lista
+    dragState.lista = lista;
+    dragState.listaOverflow = lista.style.overflow;
+    lista.style.overflow = 'hidden';
+  }
+}
+
+function posizionaSwitch(fx, fy) {
+  const sw = dragState && dragState.sw;
+  if (!sw) return;
+  const pr = dragState.el.getBoundingClientRect();
+  const centro = fx + (dragState.latoDestro ? SW_W / 3 : -SW_W / 3);
+  sw.style.width = SW_W + 'px';
+  sw.style.height = SW_H + 'px';
+  sw.style.left = (centro - SW_W / 2 - pr.left) + 'px';
+  sw.style.top = (fy - SW_H / 2 - pr.top) + 'px';
+}
+
+function forzaTickInterruttore(fx, fy) {
+  if (!dragState || !dragState.sw) return;
+  dragState.latoDestro = !dragState.latoDestro;
+  posizionaSwitch(fx, fy);
+}
+
+// Rimette a posto l'interruttore (con un piccolo ritardo, a rilascio del dito già elaborato)
+function ripristinaSwitchDrag(stato) {
+  if (!stato.sw && !stato.lista) return;
+  setTimeout(() => {
+    if (stato.sw && stato.sw.isConnected) stato.sw.setAttribute('style', stato.swStile || '');
+    if (stato.lista) stato.lista.style.overflow = stato.listaOverflow || '';
+  }, 300);
+}
+
 function initDragFormazione() {
   const campo = document.getElementById('campo-da-calcio');
   if (!campo || campo.dataset.dragInit) return;
@@ -402,6 +478,8 @@ function attivaDrag() {
   dragState.el.classList.add('pedina-sollevata');
   creaGhostIcona(dragState.dati, dragState.x ?? dragState.x0, dragState.y ?? dragState.y0);
   triggerHaptic(35);                                            // "sollevato"
+  preparaBersagli();
+  preparaSwitchDrag();
 }
 
 function onPedinaMove(e) {
@@ -418,14 +496,14 @@ function onPedinaMove(e) {
   e.preventDefault();
   muoviGhostIcona(e.clientX, e.clientY);
 
-  const sotto = document.elementFromPoint(e.clientX, e.clientY)?.closest('.pedina-formazione') || null;
-  const bersaglio = (sotto && sotto !== dragState.el) ? sotto : null;
+  const bersaglio = trovaBersaglio(e.clientX, e.clientY);
   if (bersaglio !== dragTarget) {
     dragTarget?.classList.remove('pedina-target');
     dragTarget = bersaglio;
     if (dragTarget) {
       dragTarget.classList.add('pedina-target');
-      triggerHaptic(15);                                        // passaggio sopra un altro giocatore
+      triggerHaptic(15);                                        // Android: passaggio sopra un altro giocatore
+      forzaTickInterruttore(e.clientX, e.clientY);              // iPhone: tick dell'interruttore
     }
   }
 }
@@ -454,6 +532,7 @@ function onPedinaCancel(e) {
 function fineDrag() {
   if (!dragState) return;
   clearTimeout(dragState.timer);
+  ripristinaSwitchDrag(dragState);
   dragState.el.classList.remove('pedina-sollevata');
   dragTarget?.classList.remove('pedina-target');
   dragTarget = null;
@@ -467,7 +546,10 @@ function fineDrag() {
 // Tap su un giocatore (selezione + secondo tap per scambiare): ignorato subito dopo un trascinamento
 window.clickPedina = function(id, tipo) {
   if (Date.now() < bloccaClickFinoA) return;
-  gestisciClickGiocatore(id, tipo);
+  if (HA_VIBRATE) return gestisciClickGiocatore(id, tipo);
+  // iPhone: il campo viene ridisegnato a ogni tocco e questo distruggerebbe l'interruttore sotto il dito
+  // mentre iOS sta ancora facendo il tick. Aspetto che il tick sia partito, poi ridisegno.
+  setTimeout(() => gestisciClickGiocatore(id, tipo), 180);
 };
 
 // Gestione interazione al click / tocco sui giocatori in campo e panchina
