@@ -875,7 +875,7 @@
   <div id="overlay-menu" onclick="chiudiMenuUtente()" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 transition-opacity"></div>
   
   <!-- Pannello laterale -->
-  <aside id="side-menu" class="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white z-50 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col relative">
+  <aside id="side-menu" class="fixed top-0 left-0 h-full w-[85%] max-w-sm bg-white z-50 shadow-2xl transform -translate-x-full transition-transform duration-300 flex flex-col">
     
     <!-- Intestazione Menù -->
     <div class="p-6 flex flex-col items-center mt-4 shrink-0">
@@ -1072,19 +1072,6 @@
       <button onclick="document.getElementById('modal-modifica-presenze-admin').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-base w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">✕</button>
       
       <h3 class="font-black text-slate-900 text-base">Modifica Presenze Sondaggio</h3>
-
-      <div id="sezione-non-votanti-admin" class="hidden text-xs border-b border-slate-100 pb-2">
-        <button onclick="toggleDettaglioNonVotanti()" class="w-full flex justify-between items-center text-slate-500 font-bold hover:text-slate-800 transition-colors">
-          <span class="flex items-center gap-1.5">
-            <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            <span id="label-count-non-votanti">Ancora non hanno votato (0)</span>
-          </span>
-          <span id="icon-non-votanti" class="text-xs">▼</span>
-        </button>
-        <div id="container-non-votanti" class="hidden mt-2 p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-700 font-medium">
-          <!-- Popolato via JS -->
-        </div>
-      </div>
 
       <div id="lista-presenze-admin-edit" class="space-y-2 overflow-y-auto flex-1 pr-1"></div>
 
