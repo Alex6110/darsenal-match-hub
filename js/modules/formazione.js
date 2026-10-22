@@ -124,6 +124,18 @@ window.apriSezioneFormazione = function() {
     adminControls.classList.remove('hidden');
   }
 
+  const wrapperModulo = document.querySelector('#view-formazione .custom-select-wrapper');
+  if (wrapperModulo) {
+    const arrow = wrapperModulo.querySelector('svg');
+    if (typeof isAdmin !== 'undefined' && isAdmin) {
+      wrapperModulo.style.pointerEvents = 'auto';
+      if (arrow) arrow.style.display = 'block';
+    } else {
+      wrapperModulo.style.pointerEvents = 'none'; // Blocca l'interazione per i non admin
+      if (arrow) arrow.style.display = 'none';     // Nasconde la freccia del menu a tendina
+    }
+  }
+  
   caricaDatiFormazione();
 };
 
