@@ -383,8 +383,8 @@ async function caricaSondaggi() {
 
           ${avvisoConvocazioniChiuse}
           ${btnSpareggioAdmin}
-          ${sezioneNonVotantiHtml}
           ${btnEditaPresenzeAdmin}
+          ${sezioneNonVotantiHtml}
 
           <div class="grid grid-cols-2 gap-3 mb-5">
             <div class="bg-emerald-50/50 rounded-2xl p-3 border border-emerald-100/50">
