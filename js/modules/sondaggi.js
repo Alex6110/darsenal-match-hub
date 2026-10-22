@@ -487,6 +487,7 @@ function aggiornaStatoTabFiltri(tuttiSondaggi, tuttePresenze, tuttiVotiCustom) {
 // -------------------------------------------------------------
 let partitaIdModificaPresenze = null;
 
+// Aggiungi o sostituisci la funzione apriModalModificaPresenzeAdmin
 async function apriModalModificaPresenzeAdmin(partitaId) {
   partitaIdModificaPresenze = partitaId;
   const modal = document.getElementById('modal-modifica-presenze-admin');
@@ -501,9 +502,15 @@ async function apriModalModificaPresenzeAdmin(partitaId) {
   const { data: dbGiocatori } = await db.from('giocatori').select('*');
   if (dbGiocatori && dbGiocatori.length > 0) giocatori = dbGiocatori;
 
+  const nonVotanti = [];
+
   container.innerHTML = giocatori.map(g => {
     const nomeCompleto = g.nome_completo || g.nome;
     const statoAttuale = presenzeMap[nomeCompleto.toLowerCase()] || 'Non Votato';
+
+    if (statoAttuale === 'Non Votato') {
+      nonVotanti.push(nomeCompleto);
+    }
 
     return `
       <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 gap-2">
@@ -517,7 +524,33 @@ async function apriModalModificaPresenzeAdmin(partitaId) {
     `;
   }).join('');
 
+  // Gestione tendina non votanti
+  const sezioneNonVotanti = document.getElementById('sezione-non-votanti-admin');
+  const labelCount = document.getElementById('label-count-non-votanti');
+  const containerNonVotanti = document.getElementById('container-non-votanti');
+
+  if (sezioneNonVotanti && labelCount && containerNonVotanti) {
+    if (nonVotanti.length > 0) {
+      sezioneNonVotanti.classList.remove('hidden');
+      labelCount.innerText = `Ancora non hanno votato (${nonVotanti.length})`;
+      containerNonVotanti.innerText = nonVotanti.join(', ');
+    } else {
+      sezioneNonVotanti.classList.add('hidden');
+    }
+  }
+
   modal.classList.remove('hidden');
+}
+
+// Funzione helper per aprire/chiudere la tendina dei non votanti
+function toggleDettaglioNonVotanti() {
+  const container = document.getElementById('container-non-votanti');
+  const icona = document.getElementById('icon-non-votanti');
+  if (container && icona) {
+    const isHidden = container.classList.contains('hidden');
+    container.classList.toggle('hidden');
+    icona.innerText = isHidden ? '▲' : '▼';
+  }
 }
 
 function selezionaStatoPresenzaAdmin(btn, stato) {
