@@ -172,8 +172,11 @@ async function caricaSondaggi() {
   const { data: presenzeList } = await db.from('presenze').select('*');
   const tuttePresenze = presenzeList || [];
 
+  let giocatori = GIOCATORI_MOCK;
+  const { data: dbGiocatori } = await db.from('giocatori').select('*');
+  if (dbGiocatori && dbGiocatori.length > 0) giocatori = dbGiocatori;
+
   const adesso = new Date();
-  // Considera nel calcolo presenze SOLO i match di torneo già iniziati/passati (esclude amichevoli e custom)
   const presenzeStorichePassate = tuttePresenze.filter(pr => {
     const matchId = pr.id_partita || pr.id_sondaggio || pr.partita_id;
     const match = (tuttePartite || []).find(p => String(p.id) === String(matchId));
@@ -187,7 +190,7 @@ async function caricaSondaggi() {
   const tuttiVotiCustom = votiCustomList || [];
 
   aggiornaStatoTabFiltri(tuttiSondaggiFuturi, tuttePresenze, tuttiVotiCustom);
-  aggiornaBadgeNavSondaggi(tuttiSondaggiFuturi, tuttePresenze, tuttiVotiCustom); // <-- AGGIUNGI QUESTO
+  aggiornaBadgeNavSondaggi(tuttiSondaggiFuturi, tuttePresenze, tuttiVotiCustom);
 
   let sondaggiVisibili = tuttiSondaggiFuturi.filter(partita => {
     if (categoriaAttivaSondaggi === 'disponibilita') {
@@ -276,6 +279,17 @@ async function caricaSondaggi() {
     }
 
     const presenzePartita = tuttePresenze.filter(p => p.id_partita === partita.id);
+    const presenzeMap = {};
+    presenzePartita.forEach(p => presenzeMap[p.nome_utente.toLowerCase()] = p.stato);
+
+    const nonVotanti = [];
+    giocatori.forEach(g => {
+      const nomeCompleto = g.nome_completo || g.nome;
+      if (!presenzeMap[nomeCompleto.toLowerCase()] || presenzeMap[nomeCompleto.toLowerCase()] === 'Non Votato') {
+        nonVotanti.push(nomeCompleto);
+      }
+    });
+
     const presenti = presenzePartita.filter(p => p.stato === 'Presente');
     const assenti = presenzePartita.filter(p => p.stato === 'Assente');
 
@@ -283,10 +297,8 @@ async function caricaSondaggi() {
 
     let esito;
     if (haDefinitoAdmin) {
-      // Se l'Admin ha confermato la distinta dei 12, mostra convocati ufficiali ed esclusi
       esito = calcolaConvocazioniEParita(presenti, presenzeStorichePassate, partita.scelte_admin);
     } else if (presenti.length > 12) {
-      // La palla passa all'admin: finché non conferma, gli utenti vedono tutti i presenti
       esito = {
         convocati: presenti.map(p => p.nome_utente),
         inAttesa: [],
@@ -294,7 +306,6 @@ async function caricaSondaggi() {
         haParita: true
       };
     } else {
-      // <= 12 presenti: tutti convocati
       esito = calcolaConvocazioniEParita(presenti, presenzeStorichePassate, []);
     }
 
@@ -307,6 +318,21 @@ async function caricaSondaggi() {
           ⚡ Conferma Convocati 12 / Gestisci Esclusioni
         </button>`
       : '';
+
+    const sezioneNonVotantiHtml = nonVotanti.length > 0 ? `
+      <div class="text-xs border border-slate-100 rounded-xl p-2.5 bg-slate-50 mb-3">
+        <button onclick="toggleDettaglioNonVotantiMatch('${partita.id}')" class="w-full flex justify-between items-center text-slate-500 font-bold hover:text-slate-800 transition-colors">
+          <span class="flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>Ancora non hanno votato (${nonVotanti.length})</span>
+          </span>
+          <span id="icon-non-votanti-${partita.id}" class="text-xs">▼</span>
+        </button>
+        <div id="container-non-votanti-${partita.id}" class="hidden mt-2 pt-2 border-t border-slate-100 text-[11px] text-slate-700 font-medium">
+          ${nonVotanti.join(', ')}
+        </div>
+      </div>
+    ` : '';
 
     const mioVoto = presenzePartita.find(p => p.nome_utente?.toLowerCase() === currentUser?.toLowerCase());
 
@@ -357,6 +383,7 @@ async function caricaSondaggi() {
 
           ${avvisoConvocazioniChiuse}
           ${btnSpareggioAdmin}
+          ${sezioneNonVotantiHtml}
           ${btnEditaPresenzeAdmin}
 
           <div class="grid grid-cols-2 gap-3 mb-5">
@@ -411,6 +438,16 @@ async function caricaSondaggi() {
       </div>
     `;
   }).join('');
+}
+
+function toggleDettaglioNonVotantiMatch(partitaId) {
+  const container = document.getElementById(`container-non-votanti-${partitaId}`);
+  const icona = document.getElementById(`icon-non-votanti-${partitaId}`);
+  if (container && icona) {
+    const isHidden = container.classList.contains('hidden');
+    container.classList.toggle('hidden');
+    icona.innerText = isHidden ? '▲' : '▼';
+  }
 }
 
 function toggleVisualizzaVoti(id) {
@@ -487,7 +524,6 @@ function aggiornaStatoTabFiltri(tuttiSondaggi, tuttePresenze, tuttiVotiCustom) {
 // -------------------------------------------------------------
 let partitaIdModificaPresenze = null;
 
-// Aggiungi o sostituisci la funzione apriModalModificaPresenzeAdmin
 async function apriModalModificaPresenzeAdmin(partitaId) {
   partitaIdModificaPresenze = partitaId;
   const modal = document.getElementById('modal-modifica-presenze-admin');
@@ -502,15 +538,9 @@ async function apriModalModificaPresenzeAdmin(partitaId) {
   const { data: dbGiocatori } = await db.from('giocatori').select('*');
   if (dbGiocatori && dbGiocatori.length > 0) giocatori = dbGiocatori;
 
-  const nonVotanti = [];
-
   container.innerHTML = giocatori.map(g => {
     const nomeCompleto = g.nome_completo || g.nome;
     const statoAttuale = presenzeMap[nomeCompleto.toLowerCase()] || 'Non Votato';
-
-    if (statoAttuale === 'Non Votato') {
-      nonVotanti.push(nomeCompleto);
-    }
 
     return `
       <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 gap-2">
@@ -524,33 +554,7 @@ async function apriModalModificaPresenzeAdmin(partitaId) {
     `;
   }).join('');
 
-  // Gestione tendina non votanti
-  const sezioneNonVotanti = document.getElementById('sezione-non-votanti-admin');
-  const labelCount = document.getElementById('label-count-non-votanti');
-  const containerNonVotanti = document.getElementById('container-non-votanti');
-
-  if (sezioneNonVotanti && labelCount && containerNonVotanti) {
-    if (nonVotanti.length > 0) {
-      sezioneNonVotanti.classList.remove('hidden');
-      labelCount.innerText = `Ancora non hanno votato (${nonVotanti.length})`;
-      containerNonVotanti.innerText = nonVotanti.join(', ');
-    } else {
-      sezioneNonVotanti.classList.add('hidden');
-    }
-  }
-
   modal.classList.remove('hidden');
-}
-
-// Funzione helper per aprire/chiudere la tendina dei non votanti
-function toggleDettaglioNonVotanti() {
-  const container = document.getElementById('container-non-votanti');
-  const icona = document.getElementById('icon-non-votanti');
-  if (container && icona) {
-    const isHidden = container.classList.contains('hidden');
-    container.classList.toggle('hidden');
-    icona.innerText = isHidden ? '▲' : '▼';
-  }
 }
 
 function selezionaStatoPresenzaAdmin(btn, stato) {
