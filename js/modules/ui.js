@@ -160,6 +160,7 @@ async function caricaMessaggi() {
   const latestMessageId = messaggi[messaggi.length - 1]?.id;
   const lettiIdsUser = currentUser ? (tutteLetture || []).filter(l => l.nome_utente === currentUser).map(l => l.id_messaggio) : [];
 
+  // Individua l'indice del primo messaggio non letto
   let primoNonLettoIndex = -1;
   if (currentUser) {
     for (let i = 0; i < messaggi.length; i++) {
@@ -171,9 +172,12 @@ async function caricaMessaggi() {
   }
 
   messaggi.forEach((msg, index) => {
-    if (currentUser && primoNonLettoIndex !== -1 && index === primoNonLettoIndex && primoNonLettoIndex > 0 && !unreadDividerInserted) {
+    // Se troviamo il primo non letto, inseriamo un'ancora di scroll
+    const isFirstUnread = (currentUser && primoNonLettoIndex !== -1 && index === primoNonLettoIndex);
+
+    if (isFirstUnread && !unreadDividerInserted) {
       html += `
-        <div class="flex items-center my-4">
+        <div id="primo-messaggio-non-letto" class="flex items-center my-4">
           <div class="flex-grow border-t border-rose-300"></div>
           <span class="mx-3 text-[10px] font-black uppercase tracking-wider text-rose-500 bg-rose-50 px-3 py-1 rounded-full border border-rose-200 shadow-xs">Messaggi non letti</span>
           <div class="flex-grow border-t border-rose-300"></div>
@@ -208,12 +212,10 @@ async function caricaMessaggi() {
       ? "bg-white p-4 rounded-2xl shadow-md border-2 border-burgundy relative transition-all"
       : "bg-white p-4 rounded-2xl shadow-sm border border-slate-100 relative transition-all";
 
-    // Calcolo letti / non letti per questo messaggio
     const lettureMsg = (tutteLetture || []).filter(l => l.id_messaggio === msg.id);
     const utentiLetti = lettureMsg.map(l => l.nome_utente);
     const utentiNonLetti = giocatoriList.filter(g => !utentiLetti.some(u => u.toLowerCase() === g.toLowerCase()));
 
-    // Sezione Admin letture
     let sezioneLettureAdmin = '';
     if (isAdmin) {
       sezioneLettureAdmin = `
@@ -233,7 +235,6 @@ async function caricaMessaggi() {
       `;
     }
 
-   // Gestione Reazioni Avanzata con Nomi
     const reazioniMsg = (tutteReazioni || []).filter(r => r.id_messaggio === msg.id);
     const emojiDisponibili = ['👍', '❤️', '⚽', '🔥'];
     
@@ -284,7 +285,6 @@ async function caricaMessaggi() {
         </div>
         <div class="text-sm text-slate-700 font-medium whitespace-pre-wrap leading-relaxed mb-3 select-text">${msg.testo}</div>
         
-        <!-- Reazioni ed emoji -->
         <div class="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
           ${reazioniHtml}
         </div>
@@ -295,6 +295,18 @@ async function caricaMessaggi() {
   });
 
   container.innerHTML = html;
+
+  // --- GESTIONE AUTOMATICA SCROLL (COMPORTAMENTO APP DI MESSAGGISTICA) ---
+  setTimeout(() => {
+    const targetNonLetto = document.getElementById('primo-messaggio-non-letto');
+    if (targetNonLetto) {
+      // Se ci sono messaggi non letti, posiziona lo scroll esattamente sopra il separatore "Messaggi non letti"
+      targetNonLetto.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      // Se sono stati letti tutti, porta la visuale direttamente in fondo (sull'ultimo messaggio ricevuto)
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+  }, 100);
 
   if (currentUser && messaggi.length > 0) {
     const lettureBulk = messaggi.map(msg => ({
