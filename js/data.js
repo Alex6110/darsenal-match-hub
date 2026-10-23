@@ -18,9 +18,7 @@ const GIOCATORI_MOCK = [
   { numero_maglia: 9, nome_completo: "Moscato Calogero", ruolo: "Giocatore", posizione: "Attaccante", data_nascita: "20/04/1982" },
   { numero_maglia: 5, nome_completo: "Polidori Andrea", ruolo: "Giocatore", posizione: "Esterno", data_nascita: "19/11/1996" },
   { numero_maglia: 16, nome_completo: "Salvi Icaro", ruolo: "Giocatore", posizione: "Portiere", data_nascita: "02/04/1988" },
-  { numero_maglia: 12, nome_completo: "Vanni Mattia", ruolo: "Giocatore", posizione: "Esterno", data_nascita: "06/07/1993" },
-  { numero_maglia: 12, nome_completo: "Rossi Mario", ruolo: "Giocatore", posizione: "Esterno", data_nascita: "06/07/1994" },
-  { numero_maglia: 12, nome_completo: "Bizza Luca", ruolo: "Giocatore", posizione: "Esterno", data_nascita: "06/07/1995" }
+  { numero_maglia: 12, nome_completo: "Vanni Mattia", ruolo: "Giocatore", posizione: "Esterno", data_nascita: "06/07/1993" }
 ];
 
 const CLASSIFICA_MOCK = [
