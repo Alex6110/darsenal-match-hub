@@ -226,13 +226,57 @@ async function caricaDatiFormazione() {
     formazioneTitolari = formazioneSalvata.titolari || {};
     riserveLista = formazioneSalvata.riserve || [];
 
-    // Rimuove dai titolari/riserve chi ha cambiato voto ed è ora assente
+    // 1. Rimuove dai titolari/riserve chi ha cambiato voto ed è ora assente
     Object.keys(formazioneTitolari).forEach(k => {
       if (formazioneTitolari[k]?.nome && !convocatiNomi.includes(formazioneTitolari[k].nome)) {
         formazioneTitolari[k] = { nome: 'Vuoto', numero: '--', isPortiere: formazioneTitolari[k].isPortiere };
       }
     });
     riserveLista = riserveLista.filter(r => convocatiNomi.includes(r.nome));
+
+    // 2. CORREZIONE PORTIERE: Se lo slot 0 è vuoto o il portiere è assente, assegna il nuovo portiere disponibile
+    const portiereAttuale = formazioneTitolari[0];
+    if (!portiereAttuale || portiereAttuale.nome === 'Vuoto' || !convocatiNomi.includes(portiereAttuale.nome)) {
+      let anagrafica = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
+      let nuovoPortiereNome = convocatiNomi.find(nome => {
+        const g = anagrafica.find(item => (item.nome_completo || item.nome)?.toLowerCase().trim() === nome.toLowerCase().trim());
+        return g?.posizione?.toLowerCase().includes('portiere') || g?.posizione?.toLowerCase().includes('port') || g?.numero_maglia === 1;
+      });
+      if (!nuovoPortiereNome && convocatiNomi.length > 0) {
+        const giaUsati = [
+          ...Object.values(formazioneTitolari).map(t => t?.nome),
+          ...riserveLista.map(r => r?.nome)
+        ];
+        nuovoPortiereNome = convocatiNomi.find(n => !giaUsati.includes(n));
+      }
+
+      if (nuovoPortiereNome) {
+        const g = anagrafica.find(item => (item.nome_completo || item.nome)?.toLowerCase().trim() === nuovoPortiereNome.toLowerCase().trim());
+        formazioneTitolari[0] = {
+          nome: nuovoPortiereNome,
+          numero: g?.numero_maglia || 1,
+          ruolo: 'Portiere',
+          isPortiere: true
+        };
+      }
+    }
+
+    // 3. Aggiunge automaticamente eventuali nuovi convocati non ancora presenti in formazione/panchina
+    const tuttiPresentiInFormazione = [
+      ...Object.values(formazioneTitolari).map(t => t?.nome),
+      ...riserveLista.map(r => r?.nome)
+    ];
+    convocatiNomi.forEach(nome => {
+      if (!tuttiPresentiInFormazione.includes(nome)) {
+        const anagrafica = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
+        const g = anagrafica.find(item => (item.nome_completo || item.nome)?.toLowerCase().trim() === nome.toLowerCase().trim());
+        riserveLista.push({
+          nome,
+          numero: g?.numero_maglia || Math.floor(Math.random() * 90) + 2,
+          ruolo: g?.posizione || 'Giocatore'
+        });
+      }
+    });
 
     const display = document.getElementById('display-modulo-corrente');
     if (display) display.innerText = moduloAttivo;
