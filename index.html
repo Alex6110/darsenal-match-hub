@@ -550,26 +550,97 @@
 
     <!-- VISTA SALDO / CASSA -->
     <section id="view-saldo" class="hidden space-y-4 pb-24">
-      <div class="flex justify-between items-center mb-2">
-        <h2 class="text-xs font-black uppercase text-slate-400 tracking-wider">Cassa & Saldo Squadra</h2>
-        <button id="btn-aggiungi-movimento" onclick="aggiungiMovimentoSaldo()" class="hidden bg-burgundy text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-md flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-          Nuovo Movimento
+      
+      <!-- SELETTORE A SCHEDA: SQUADRA / GIOCATORE -->
+      <div class="flex bg-slate-200 p-1 rounded-xl text-xs font-black">
+        <button id="btn-tab-squadra" onclick="switchTabCassa('squadra')" class="flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all">
+          Squadra
+        </button>
+        <button id="btn-tab-giocatore" onclick="switchTabCassa('giocatore')" class="flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center gap-1">
+          Giocatore <span class="bg-burgundy text-white text-[9px] px-1.5 py-0.5 rounded-full font-normal">Admin</span>
         </button>
       </div>
 
-      <!-- Box Totale Cassa -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between">
-        <div>
-          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Totale Cassa</span>
-          <span id="totale-cassa" class="text-xl font-black text-slate-800">€ 0.00</span>
+      <!-- VISTA 1: TAB SQUADRA -->
+      <div id="tab-squadra-view" class="space-y-4">
+        <!-- BOX SALDO SQUADRA -->
+        <div class="bg-gradient-to-br from-burgundy to-burgundy-dark text-white p-5 rounded-3xl shadow-lg text-center space-y-1">
+          <p class="text-[10px] font-bold uppercase tracking-wider text-burgundy-light/80">Saldo Totale Cassa Squadra</p>
+          <p id="display-saldo-squadra" class="text-3xl font-black">0.00 €</p>
+          <p class="text-[10px] opacity-80">Derivante da arrotondamenti e versamenti</p>
         </div>
-        <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">💶</div>
+
+        <!-- TABELLA SALDO GIOCATORI -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="font-black text-xs text-slate-700 uppercase tracking-wider">Saldi Individuali</h3>
+            <span id="num-giocatori-saldo" class="text-[10px] text-slate-400 font-bold">Giocatori</span>
+          </div>
+          <div class="divide-y divide-slate-100 max-h-[50vh] overflow-y-auto" id="lista-saldi-squadra">
+            <!-- Popolato via JS da Supabase -->
+          </div>
+        </div>
       </div>
 
-      <!-- Lista Movimenti -->
-      <div id="saldo-container" class="space-y-2.5">
-        <div class="text-center text-xs text-slate-400 py-6">Caricamento saldo...</div>
+      <!-- VISTA 2: TAB GIOCATORE / PARTITE (SOLO ADMIN) -->
+      <div id="tab-giocatore-view" class="hidden space-y-4">
+        <!-- VISTA ELENCO PARTITE -->
+        <div id="vista-elenco-partite" class="space-y-3">
+          <div class="bg-amber-50 border border-amber-200 p-3 rounded-2xl text-[11px] text-amber-800">
+            <strong>Modalità Spogliatoio Admin:</strong> Clicca sulla partita per registrare o modificare le quote.
+          </div>
+          <div id="lista-partite-cassa" class="space-y-2.5">
+            <!-- Popolato via JS da Supabase -->
+          </div>
+        </div>
+
+        <!-- VISTA DETTAGLIO SPOGLIATOIO PARTITA SELEZIONATA -->
+        <div id="vista-dettaglio-partita" class="hidden space-y-4">
+          <button onclick="chiudiDettaglioPartita()" class="text-xs font-bold text-burgundy flex items-center gap-1 hover:underline">
+            &larr; Torna all'elenco partite
+          </button>
+
+          <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+              <div>
+                <h3 id="spog-titolo-partita" class="font-black text-sm text-slate-800">Darsenal vs Avversario</h3>
+                <p id="spog-data-partita" class="text-[10px] font-bold text-slate-400">Data e Ora</p>
+              </div>
+              <span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded-full">Attivo</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
+              <div>
+                <span class="block text-[9px] font-bold text-slate-400 uppercase">Presenti</span>
+                <span id="spog-num-presenti" class="text-base font-black text-slate-800">0</span>
+              </div>
+              <div>
+                <span class="block text-[9px] font-bold text-slate-400 uppercase">Quota/Testa</span>
+                <span id="spog-quota-testa" class="text-base font-black text-burgundy">0.00 €</span>
+              </div>
+              <div>
+                <span class="block text-[9px] font-bold text-slate-400 uppercase">Cassa Nata</span>
+                <span id="spog-cassa-partita" class="text-base font-black text-emerald-600">+0.00 €</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b border-slate-100 grid grid-cols-12 text-[10px] font-black text-slate-400 uppercase text-center">
+              <span class="col-span-4 text-left pl-2">Giocatore</span>
+              <span class="col-span-3">Dati (€)</span>
+              <span class="col-span-3">Resto (€)</span>
+              <span class="col-span-2">Saldo</span>
+            </div>
+            <div id="spog-lista-giocatori" class="divide-y divide-slate-100 max-h-[50vh] overflow-y-auto">
+              <!-- Popolato via JS -->
+            </div>
+          </div>
+
+          <button onclick="salvaIncassoPartita()" class="w-full py-3.5 bg-burgundy text-white font-black text-xs rounded-2xl shadow-lg hover:bg-burgundy-dark transition">
+            Salva Dati e Aggiorna Saldi Squadra
+          </button>
+        </div>
       </div>
     </section>
   </main>
@@ -958,9 +1029,10 @@
         </button>
       </div>
 
-      <button onclick="switchTab('saldo'); chiudiMenu();" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-all">
-        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-        Cassa & Saldo Squadra
+      <!-- VOCE CASSA & SALDO SQUADRA NEL MENU LATERALE -->
+      <button onclick="chiudiMenuUtente(); switchTab('saldo'); apriSezioneCassa();" class="w-full py-3 mt-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center gap-2 transition-all">
+        <svg class="w-5 h-5 text-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        <span class="font-bold text-xs text-burgundy uppercase tracking-wider">Cassa & Saldo Squadra</span>
       </button>
     </div>
 
