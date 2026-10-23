@@ -1388,3 +1388,10 @@ async function switchTab(tabName) {
     aggiornaBadgeMessaggi();
   }
 }
+
+document.addEventListener('input', function (e) {
+  if (e.target && e.target.id === 'whatsapp-input-msg') {
+    e.target.style.height = 'auto';
+    e.target.style.height = (e.target.scrollHeight) + 'px';
+  }
+});

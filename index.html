@@ -455,7 +455,7 @@
 
       <!-- BARRA MESSAGGI ADMIN STILE WHATSAPP (Visibile solo nella sezione messaggi per l'admin) -->
       <div id="admin-whatsapp-bar" class="hidden fixed bottom-16 left-0 right-0 bg-white border-t border-slate-200 p-2.5 z-30 max-w-md mx-auto flex items-center gap-2 shadow-lg">
-        <textarea id="whatsapp-input-msg" rows="1" placeholder="Scrivi un messaggio..." class="flex-1 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-burgundy resize-none max-h-24"></textarea>
+        <textarea id="whatsapp-input-msg" rows="1" placeholder="Scrivi un messaggio..." class="flex-1 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-burgundy resize-none overflow-y-auto" style="max-height: 100px; min-height: 38px;"></textarea>
         <button onclick="inviaMessaggioDaBarraWhatsApp()" class="bg-burgundy text-white p-2.5 rounded-full shadow-md hover:bg-burgundy-dark transition-all flex items-center justify-center shrink-0">
           <svg class="w-4 h-4 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
         </button>

@@ -49,7 +49,7 @@ const HA_VIBRATE = typeof navigator.vibrate === 'function';
 // stile inline = funziona anche se il CSS dell'index non c'è o la PWA ha una versione vecchia in cache
 const HAPTIC_SW_HTML = HA_VIBRATE ? '' :
   '<input type="checkbox" switch class="haptic-sw" tabindex="-1" aria-hidden="true" ' +
-  'style="position:absolute;left:0;top:0;width:100%;height:100%;margin:0;opacity:0;z-index:5;pointer-events:none;" />';
+  'style="position:absolute;left:0;top:0;width:100%;height:100%;margin:0;opacity:0;z-index:5;pointer-events:auto;" />';
 const TATTILE_SU_PULSANTI = true;     // false = niente interruttore invisibile sui pulsanti (solo sulle pedine)
 
 function triggerHaptic(pattern = 40) {
@@ -248,7 +248,7 @@ async function caricaDatiFormazione() {
     return { nome, numero: g?.numero_maglia || Math.floor(Math.random() * 90) + 2, ruolo: g?.posizione || 'Giocatore' };
   });
 
-  let portiereObj = listaGiocatori.find(j => j.ruolo.toLowerCase().includes('portiere') || j.numero === 1);
+  let portiereObj = listaGiocatori.find(j => j.ruolo?.toLowerCase().includes('portiere') || j.ruolo?.toLowerCase().includes('port') || j.numero === 1);
   if (!portiereObj && listaGiocatori.length > 0) {
     portiereObj = listaGiocatori[0];
     portiereObj.ruolo = 'Portiere';
