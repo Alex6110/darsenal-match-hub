@@ -56,12 +56,16 @@ async function caricaDatiCassaSupabase() {
   let totaleCassa = 0;
   (movimenti || []).forEach(m => {
     const imp = parseFloat(m.importo) || 0;
-    totaleCassa += imp;
     const nomeKey = (m.nome_giocatore || '').toLowerCase().trim();
+    
+    // Somma solo i soldi dovuti all'arrotondamento / cassa squadra
+    if (nomeKey === 'cassa squadra' || (m.causale && m.causale.toLowerCase().includes('arrotondamento'))) {
+      totaleCassa += imp;
+    }
+
     if (saldiMap[nomeKey] !== undefined) {
       saldiMap[nomeKey] += imp;
     } else {
-      // Se c'è un nome parziale o extra
       const trovato = Object.keys(saldiMap).find(k => k.includes(nomeKey) || nomeKey.includes(k));
       if (trovato) saldiMap[trovato] += imp;
     }
@@ -92,30 +96,32 @@ async function caricaPartiteCassaSupabase() {
 
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
 
-  const { data: partite, error } = await db.from('partite').select('*').order('data_ora', { ascending: false });
+  // Leggiamo direttamente dal calendario ufficiale del torneo
+  const { data: partite, error } = await db.from('calendario_torneo').select('*').order('data_ora', { ascending: false });
   if (error || !partite) {
     container.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Errore caricamento.</div>`;
     return;
   }
 
-  // Filtriamo solo le partite di tipo torneo (o senza tipo specificato), senza bloccare le future
-  const partiteTorneo = partite.filter(p => {
-    const isTorneo = !p.tipo_sondaggio || p.tipo_sondaggio === 'torneo';
-    return isTorneo;
+  // Filtriamo solo le partite in cui gioca il Darsenal
+  const partiteDarsenal = partite.filter(p => {
+    const casa = (p.squadra_casa || '').toLowerCase();
+    const trasf = (p.squadra_trasferta || '').toLowerCase();
+    return casa.includes('darsenal') || trasf.includes('darsenal');
   });
 
-  if (partiteTorneo.length === 0) {
-    container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita del torneo trovata.</div>`;
+  if (partiteDarsenal.length === 0) {
+    container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita trovata in calendario.</div>`;
     return;
   }
 
   const adesso = new Date();
 
-  container.innerHTML = partiteTorneo.map(p => {
-    // Correzione parsing data per evitare sfasamenti di fuso orario
+  container.innerHTML = partiteDarsenal.map(p => {
     const d = new Date(p.data_ora);
     const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
     const isPassata = d <= adesso;
+    const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
     
     const badgeStato = isPassata 
       ? '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">Giocata</span>' 
@@ -124,8 +130,8 @@ async function caricaPartiteCassaSupabase() {
     return `
       <div onclick="apriDettaglioSpogliatoioPartita('${p.id}')" class="p-4 rounded-2xl border bg-white border-burgundy border-2 shadow-md cursor-pointer flex justify-between items-center transition-all hover:bg-slate-50">
         <div>
-          <p class="font-black text-xs text-slate-800">Darsenal vs ${p.squadra_avversaria}</p>
-          <p class="text-[10px] text-slate-400 font-bold">${dataFormatted}</p>
+          <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
+          <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} ${p.giornata ? `- ${p.giornata}` : ''}</p>
         </div>
         <div class="flex items-center gap-2">
           ${badgeStato}
@@ -137,8 +143,21 @@ async function caricaPartiteCassaSupabase() {
 }
 
 async function apriDettaglioSpogliatoioPartita(partitaId) {
-  const { data: partita } = await db.from('partite').select('*').eq('id', partitaId).single();
+  let { data: partita } = await db.from('partite').select('*').eq('id', partitaId).single();
+  if (!partita) {
+    const { data: cal } = await db.from('calendario_torneo').select('*').eq('id', partitaId).single();
+    if (cal) {
+      const avversario = cal.squadra_casa.toLowerCase().includes('darsenal') ? cal.squadra_trasferta : cal.squadra_casa;
+      partita = {
+        id: cal.id,
+        squadra_avversaria: avversario,
+        data_ora: cal.data_ora,
+        luogo: cal.luogo
+      };
+    }
+  }
   if (!partita) return;
+  partitaSelezionataCassa = partita;
 
   partitaSelezionataCassa = partita;
   document.getElementById('vista-elenco-partite').classList.add('hidden');
@@ -217,6 +236,7 @@ async function salvaIncassoPartita() {
   const rows = document.querySelectorAll('#spog-lista-giocatori > div');
   const movimentiDaInserire = [];
 
+  let numPresenti = 0;
   rows.forEach((row, idx) => {
     const nome = row.getAttribute('data-giocatore');
     const dati = parseFloat(document.getElementById(`input-dati-${idx}`).value) || 0;
@@ -227,6 +247,7 @@ async function salvaIncassoPartita() {
     const movimentoNetto = importoVersatoNetto - quota;
 
     if (importoVersatoNetto > 0) {
+      numPresenti++;
       movimentiDaInserire.push({
         nome_giocatore: nome,
         importo: movimentoNetto,
@@ -234,6 +255,20 @@ async function salvaIncassoPartita() {
       });
     }
   });
+
+  // Calcolo e inserimento specifico dell'arrotondamento per la cassa squadra
+  const costoCampo = 50;
+  const quotaEsatta = numPresenti > 0 ? costoCampo / numPresenti : 0;
+  const quotaArrotondata = Math.ceil(quotaEsatta * 10) / 10;
+  const cassaGenerata = numPresenti > 0 ? (quotaArrotondata * numPresenti) - costoCampo : 0;
+
+  if (cassaGenerata > 0) {
+    movimentiDaInserire.push({
+      nome_giocatore: 'Cassa Squadra',
+      importo: cassaGenerata,
+      causale: `Arrotondamento Partita vs ${partitaSelezionataCassa.squadra_avversaria}`
+    });
+  }
 
   if (movimentiDaInserire.length > 0) {
     const { error } = await db.from('movimenti_cassa').insert(movimentiDaInserire);
