@@ -49,7 +49,7 @@ const HA_VIBRATE = typeof navigator.vibrate === 'function';
 // stile inline = funziona anche se il CSS dell'index non c'è o la PWA ha una versione vecchia in cache
 const HAPTIC_SW_HTML = HA_VIBRATE ? '' :
   '<input type="checkbox" switch class="haptic-sw" tabindex="-1" aria-hidden="true" ' +
-  'style="position:absolute;left:0;top:0;width:100%;height:100%;margin:0;opacity:0;z-index:5;">';
+  'style="position:absolute;left:0;top:0;width:100%;height:100%;margin:0;opacity:0;z-index:5;pointer-events:none;" />';
 const TATTILE_SU_PULSANTI = true;     // false = niente interruttore invisibile sui pulsanti (solo sulle pedine)
 
 function triggerHaptic(pattern = 40) {
@@ -207,7 +207,15 @@ async function caricaDatiFormazione() {
   if (!partitaCorrente) return;
   partitaCorrenteId = partitaCorrente.id;
 
-  // 1. Controlla se esiste una formazione già salvata su Supabase
+  // Recupera i presenti aggiornati dal sondaggio
+  const { data: presenze } = await db.from('presenze')
+    .select('*')
+    .eq('id_partita', partitaCorrente.id)
+    .eq('stato', 'Presente');
+
+  let convocatiNomi = (presenze || []).map(p => p.nome_utente);
+
+  // Controlla la formazione salvata
   const { data: formazioneSalvata } = await db.from('formazioni_partite')
     .select('*')
     .eq('id_partita', partitaCorrenteId)
@@ -217,7 +225,15 @@ async function caricaDatiFormazione() {
     moduloAttivo = formazioneSalvata.modulo || '2-3-1';
     formazioneTitolari = formazioneSalvata.titolari || {};
     riserveLista = formazioneSalvata.riserve || [];
-    
+
+    // Rimuove dai titolari/riserve chi ha cambiato voto ed è ora assente
+    Object.keys(formazioneTitolari).forEach(k => {
+      if (formazioneTitolari[k]?.nome && !convocatiNomi.includes(formazioneTitolari[k].nome)) {
+        formazioneTitolari[k] = { nome: 'Vuoto', numero: '--', isPortiere: formazioneTitolari[k].isPortiere };
+      }
+    });
+    riserveLista = riserveLista.filter(r => convocatiNomi.includes(r.nome));
+
     const display = document.getElementById('display-modulo-corrente');
     if (display) display.innerText = moduloAttivo;
     
@@ -225,24 +241,11 @@ async function caricaDatiFormazione() {
     return;
   }
 
-  // 2. Fallback: genera dai convocati "Presenti" se non è ancora stata salvata una formazione
-  const { data: presenze } = await db.from('presenze')
-    .select('*')
-    .eq('id_partita', partitaCorrente.id)
-    .eq('stato', 'Presente');
-
-  let convocatiNomi = (presenze || []).map(p => p.nome_utente);
-
+  // Generazione automatica iniziale dai presenti...
   let listaGiocatori = convocatiNomi.map(nome => {
     const anagrafica = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
-    const g = anagrafica.find(item => 
-      (item.nome_completo || item.nome)?.toLowerCase().trim() === nome.toLowerCase().trim()
-    );
-    return {
-      nome,
-      numero: g?.numero_maglia || Math.floor(Math.random() * 90) + 2,
-      ruolo: g?.posizione || 'Giocatore'
-    };
+    const g = anagrafica.find(item => (item.nome_completo || item.nome)?.toLowerCase().trim() === nome.toLowerCase().trim());
+    return { nome, numero: g?.numero_maglia || Math.floor(Math.random() * 90) + 2, ruolo: g?.posizione || 'Giocatore' };
   });
 
   let portiereObj = listaGiocatori.find(j => j.ruolo.toLowerCase().includes('portiere') || j.numero === 1);
@@ -253,16 +256,11 @@ async function caricaDatiFormazione() {
   }
 
   let outfield = listaGiocatori.filter(j => j !== portiereObj);
-
   formazioneTitolari = {};
-  if (portiereObj) {
-    formazioneTitolari[0] = { ...portiereObj, isPortiere: true };
-  }
-
+  if (portiereObj) formazioneTitolari[0] = { ...portiereObj, isPortiere: true };
   for (let i = 0; i < 6 && i < outfield.length; i++) {
     formazioneTitolari[i + 1] = outfield[i];
   }
-
   riserveLista = outfield.slice(6);
   renderCampoFormazione();
 }

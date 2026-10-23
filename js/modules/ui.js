@@ -1315,3 +1315,76 @@ window.toggleReazioneCorrenteDallaModal = async function() {
   await toggleReazioneMessaggio(messaggioIdCorrenteReazione, emojiCorrenteReazione);
   document.getElementById('modal-dettaglio-reazione').classList.add('hidden');
 };
+
+async function inviaMessaggioDaBarraWhatsApp() {
+  const inputEl = document.getElementById('whatsapp-input-msg');
+  if (!inputEl) return;
+  const testo = inputEl.value.trim();
+  if (!testo) return mostraAlert("Scrivi un testo per il messaggio.");
+
+  const { error } = await db.from('messaggi').insert([{ testo }]);
+  if (error) return mostraAlert("Errore durante l'invio: " + error.message);
+
+  inputEl.value = '';
+  await caricaMessaggi();
+  await aggiornaBadgeMessaggi();
+}
+
+// All'interno di switchTab(tabName), gestisci la visibilità della barra WhatsApp:
+async function switchTab(tabName) {
+  if ((tabName === 'sondaggi' || tabName === 'messaggi') && !currentUser) {
+    const loginModal = document.getElementById('login-modal');
+    if (loginModal) loginModal.classList.remove('hidden');
+    return;
+  }
+
+  localStorage.setItem('darsenal_active_tab', tabName);
+
+  ['partite', 'classifica', 'sondaggi', 'messaggi', 'formazione'].forEach(t => {
+    const el = document.getElementById(`view-${t}`);
+    if (el) el.classList.add('hidden');
+  });
+
+  ['partite', 'classifica', 'sondaggi'].forEach(t => {
+    const navBtn = document.getElementById(`nav-${t}`);
+    if (navBtn) {
+      navBtn.classList.remove('text-burgundy');
+      navBtn.classList.add('text-slate-400');
+    }
+  });
+
+  const viewEl = document.getElementById(`view-${tabName}`);
+  if (viewEl) viewEl.classList.remove('hidden');
+
+  // Mostra la barra WhatsApp dell'admin solo se siamo nella tab messaggi ed è admin
+  const whatsappBar = document.getElementById('admin-whatsapp-bar');
+  if (whatsappBar) {
+    if (tabName === 'messaggi' && typeof isAdmin !== 'undefined' && isAdmin) {
+      whatsappBar.classList.remove('hidden');
+    } else {
+      whatsappBar.classList.add('hidden');
+    }
+  }
+
+  if (tabName !== 'messaggi') {
+    const activeBtn = document.getElementById(`nav-${tabName}`);
+    if (activeBtn) {
+      activeBtn.classList.add('text-burgundy');
+      activeBtn.classList.remove('text-slate-400');
+    }
+  }
+
+  if (tabName === 'partite') {
+    if (typeof caricaFasi === 'function') caricaFasi();
+    if (typeof caricaPartite === 'function') caricaPartite();
+  }
+  if (tabName === 'classifica') {
+    if (typeof caricaFasi === 'function') caricaFasi();
+    if (typeof caricaClassifica === 'function') caricaClassifica();
+  }
+  if (tabName === 'sondaggi' && typeof caricaSondaggi === 'function') caricaSondaggi();
+  if (tabName === 'messaggi') {
+    await caricaMessaggi();
+    aggiornaBadgeMessaggi();
+  }
+}

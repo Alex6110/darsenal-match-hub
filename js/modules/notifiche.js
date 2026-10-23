@@ -80,12 +80,10 @@ function mostraNotificaSistema(titolo, corpo) {
 function avviaAscoltatoriRealtime() {
   if (!window.supabase || !db) return;
 
-  // 1. ASCOLTO MESSAGGI (Per Utenti: Nuovo messaggio in bacheca)
+  // 1. ASCOLTO MESSAGGI
   db.channel('public:messaggi')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messaggi' }, payload => {
-      const nuovoMsg = payload.new;
       if (currentUser) {
-        mostraNotificaSistema("Nuovo messaggio in bacheca", nuovoMsg.testo.substring(0, 60) + "...");
         aggiornaAppBadgeTotale();
         if (typeof aggiornaBadgeMessaggi === 'function') aggiornaBadgeMessaggi();
         if (typeof caricaMessaggi === 'function' && document.getElementById('view-messaggi') && !document.getElementById('view-messaggi').classList.contains('hidden')) {
@@ -95,43 +93,28 @@ function avviaAscoltatoriRealtime() {
     })
     .subscribe();
 
-  // 2. ASCOLTO NUOVI SONDAGGI / PARTITE (Per Utenti)
+  // 2. ASCOLTO NUOVI SONDAGGI / PARTITE
   db.channel('public:partite')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'partite' }, payload => {
       const nuovaPartita = payload.new;
       if (currentUser && nuovaPartita.tipo_sondaggio !== 'annullato') {
-        mostraNotificaSistema("Nuova Convocazione / Sondaggio", `Darsenal vs ${nuovaPartita.squadra_avversaria || 'Nuovo evento'}`);
         aggiornaAppBadgeTotale();
         if (typeof caricaSondaggi === 'function') caricaSondaggi();
       }
     })
     .subscribe();
 
-  // 3. ASCOLTO REAZIONI AI MESSAGGI (Solo per Admin)
+  // 3. ASCOLTO REAZIONI AI MESSAGGI
   db.channel('public:reazioni_messaggi')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reazioni_messaggi' }, payload => {
-      const reazione = payload.new;
-      if (isAdmin && reazione.nome_utente?.toLowerCase() !== currentUser?.toLowerCase()) {
-        mostraNotificaSistema("Nuova reazione", `${reazione.nome_utente} ha reagito con ${reazione.emoji} a un messaggio.`);
-      }
-    })
-    .subscribe();
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reazioni_messaggi' }, () => {});
 
-  // 4. ASCOLTO VOTI E PRESENZE AI SONDAGGI (Solo per Admin)
+  // 4. ASCOLTO VOTI E PRESENZE AI SONDAGGI
   db.channel('public:presenze_e_voti')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'presenze' }, payload => {
-      const presenza = payload.new;
-      if (isAdmin && presenza.nome_utente?.toLowerCase() !== currentUser?.toLowerCase()) {
-        mostraNotificaSistema("Aggiornamento Convocazioni", `${presenza.nome_utente} ha votato: ${presenza.stato}`);
-        if (typeof caricaSondaggi === 'function') caricaSondaggi();
-      }
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'presenze' }, () => {
+      if (typeof caricaSondaggi === 'function') caricaSondaggi();
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'voti_sondaggi' }, payload => {
-      const voto = payload.new;
-      if (isAdmin && voto.nome_utente?.toLowerCase() !== currentUser?.toLowerCase()) {
-        mostraNotificaSistema("Nuovo Voto Sondaggio", `${voto.nome_utente} ha votato "${voto.opzione_scelta}".`);
-        if (typeof caricaSondaggi === 'function') caricaSondaggi();
-      }
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'voti_sondaggi' }, () => {
+      if (typeof caricaSondaggi === 'function') caricaSondaggi();
     })
     .subscribe();
 }
