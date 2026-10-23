@@ -547,6 +547,31 @@
         </div>
       </div>
     </section>
+
+    <!-- VISTA SALDO / CASSA -->
+    <section id="view-saldo" class="hidden space-y-4 pb-24">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-xs font-black uppercase text-slate-400 tracking-wider">Cassa & Saldo Squadra</h2>
+        <button id="btn-aggiungi-movimento" onclick="aggiungiMovimentoSaldo()" class="hidden bg-burgundy text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-md flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          Nuovo Movimento
+        </button>
+      </div>
+
+      <!-- Box Totale Cassa -->
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Totale Cassa</span>
+          <span id="totale-cassa" class="text-xl font-black text-slate-800">€ 0.00</span>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">💶</div>
+      </div>
+
+      <!-- Lista Movimenti -->
+      <div id="saldo-container" class="space-y-2.5">
+        <div class="text-center text-xs text-slate-400 py-6">Caricamento saldo...</div>
+      </div>
+    </section>
   </main>
 
   <!-- MODALE GESTIONE RISULTATO ED EVENTI MATCH -->
@@ -932,6 +957,11 @@
           <span class="font-bold text-xs text-burgundy uppercase tracking-wider">Formazione</span>
         </button>
       </div>
+
+      <button onclick="switchTab('saldo'); chiudiMenu();" class="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-2xl transition-all">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+        Cassa & Saldo Squadra
+      </button>
     </div>
 
     <!-- Tasto Logout Fisso fluttuante in basso a destra (Senza barra grigia) -->
@@ -1222,6 +1252,33 @@
   </div>
 
 
+
+  <!-- MODALE AGGIUNGI MOVIMENTO SALDO -->
+  <div id="modal-aggiungi-movimento" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="bg-white p-6 rounded-3xl w-full max-w-xs shadow-2xl border border-slate-100 relative space-y-4">
+      <button onclick="chiudiModalMovimento()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-lg w-7 h-7 flex items-center justify-center rounded-full bg-slate-100">✕</button>
+      <h3 class="font-black text-slate-900 text-base">Registra Movimento</h3>
+
+      <div class="space-y-3 text-left">
+        <div>
+          <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Nome Giocatore</label>
+          <input type="text" id="input-movimento-giocatore" placeholder="Es. Mario Rossi" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-burgundy capitalize">
+        </div>
+        <div>
+          <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Importo (€)</label>
+          <input type="number" step="0.01" id="input-movimento-importo" placeholder="Es. 10.00 o -5.00" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-burgundy focus:outline-none focus:border-burgundy">
+        </div>
+        <div>
+          <label class="block text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Causale</label>
+          <input type="text" id="input-movimento-causale" placeholder="Es. Quota campo, Multa..." class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-burgundy">
+        </div>
+
+        <button onclick="salvaNuovoMovimento()" class="w-full py-3 mt-2 bg-burgundy text-white font-bold rounded-xl text-xs shadow-md hover:bg-burgundy-dark transition-all">Salva Movimento</button>
+      </div>
+    </div>
+  </div>
+
+
   <!-- Importazione Script -->
   <script src="js/data.js"></script>
   <script src="js/supabaseConfig.js"></script>
@@ -1236,6 +1293,7 @@
   <script src="js/modules/pdf.js"></script>
   <script src="js/modules/notifiche.js"></script>
   <script src="js/modules/formazione.js"></script>
+  <script src="js/modules/saldo.js"></script>
 
   <script src="js/app.js"></script>
 </body>

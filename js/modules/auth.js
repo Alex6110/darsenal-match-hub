@@ -132,7 +132,13 @@ function applicaStatoUtente() {
   if (typeof aggiornaBadgeMessaggi === 'function') {
     aggiornaBadgeMessaggi();
   }
-}
+
+  if (isAdmin) {
+    document.getElementById('btn-aggiungi-movimento')?.classList.remove('hidden');
+  } else {
+    document.getElementById('btn-aggiungi-movimento')?.classList.add('hidden');
+  }
+  }
 
 document.addEventListener('DOMContentLoaded', async () => {
   const savedUser = localStorage.getItem('darsenal_user');
