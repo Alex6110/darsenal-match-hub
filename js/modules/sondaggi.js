@@ -608,10 +608,18 @@ async function votaPresenza(partitaId, presente) {
   if (!currentUser) return mostraAlert("Devi prima effettuare il login.");
 
   const { data: partita } = await db.from('partite').select('*').eq('id', partitaId).single();
-  const haScelteAdmin = partita?.scelte_admin && partita.scelte_admin.length > 0;
+  if (!partita) return;
 
+  // 1. Blocco se la partita è già stata giocata
+  const adesso = new Date();
+  if (new Date(partita.data_ora) <= adesso) {
+    return mostraAlert("La partita è già stata giocata. Non è più possibile modificare il voto.");
+  }
+
+  // 2. Blocco per utenti standard se l'Admin ha chiuso le convocazioni
+  const haScelteAdmin = partita.scelte_admin && partita.scelte_admin.length > 0;
   if (presente && haScelteAdmin && !isAdmin) {
-    return mostraAlert("Le convocazioni per questa partita sono già state chiuse e definite dall'Admin.");
+    return mostraAlert("Le convocazioni per questa partita sono già state definite dall'Admin.");
   }
 
   const nuovoStato = presente ? 'Presente' : 'Assente';
@@ -623,7 +631,7 @@ async function votaPresenza(partitaId, presente) {
       { onConflict: 'id_partita,nome_utente' }
     );
 
-  if (error) return mostraAlert(`Impossibile registrare il voto: ${error.message || JSON.stringify(error)}`);
+  if (error) return mostraAlert(`Impossibile registrare il voto: ${error.message}`);
 
   caricaSondaggi();
 }

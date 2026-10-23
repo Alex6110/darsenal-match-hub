@@ -1341,7 +1341,7 @@ async function switchTab(tabName) {
 
   localStorage.setItem('darsenal_active_tab', tabName);
 
-  ['partite', 'classifica', 'sondaggi', 'messaggi', 'formazione'].forEach(t => {
+  ['partite', 'classifica', 'sondaggi', 'saldo', 'messaggi', 'formazione'].forEach(t => {
     const el = document.getElementById(`view-${t}`);
     if (el) el.classList.add('hidden');
   });

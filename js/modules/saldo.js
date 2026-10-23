@@ -2,8 +2,9 @@ let partitaSelezionataCassa = null;
 let giocatoriCacheCassa = [];
 
 function apriSezioneCassa() {
-  switchTabCassa('squadra');
-  caricaDatiCassaSupabase();
+    switchTab('saldo');
+    switchTabCassa('squadra');
+    caricaDatiCassaSupabase();
 }
 
 function switchTabCassa(tab) {
@@ -91,24 +92,33 @@ async function caricaPartiteCassaSupabase() {
 
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
 
-  const { data: partite, error } = await db.from('partite').select('*').order('data_ora', { ascending: true });
-  if (error || !partite || partite.length === 0) {
-    container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita trovata.</div>`;
+  const { data: partite, error } = await db.from('partite').select('*').order('data_ora', { ascending: false });
+  if (error || !partite) {
+    container.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Errore caricamento.</div>`;
     return;
   }
 
-  container.innerHTML = partite.map(p => {
-    const dataFormatted = new Date(p.data_ora).toLocaleDateString('it-IT');
-    let cardStyle = "bg-white border-burgundy border-2 shadow-md cursor-pointer";
-    let badge = `<span class="text-[9px] bg-burgundy text-white px-2 py-0.5 rounded-full font-black">Gestisci Spogliatoio</span>`;
+  const adesso = new Date();
+  const partiteTorneoPassate = partite.filter(p => {
+    const d = new Date(p.data_ora);
+    const isTorneo = !p.tipo_sondaggio || p.tipo_sondaggio === 'torneo';
+    return isTorneo && d <= adesso;
+  });
 
+  if (partiteTorneoPassate.length === 0) {
+    container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita del torneo passata trovata.</div>`;
+    return;
+  }
+
+  container.innerHTML = partiteTorneoPassate.map(p => {
+    const dataFormatted = new Date(p.data_ora).toLocaleDateString('it-IT');
     return `
-      <div onclick="apriDettaglioSpogliatoioPartita('${p.id}')" class="p-4 rounded-2xl border flex justify-between items-center ${cardStyle}">
+      <div onclick="apriDettaglioSpogliatoioPartita('${p.id}')" class="p-4 rounded-2xl border bg-white border-burgundy border-2 shadow-md cursor-pointer flex justify-between items-center">
         <div>
           <p class="font-black text-xs text-slate-800">vs ${p.squadra_avversaria}</p>
           <p class="text-[10px] text-slate-400 font-bold">${dataFormatted}</p>
         </div>
-        ${badge}
+        <span class="text-[9px] bg-burgundy text-white px-2 py-0.5 rounded-full font-black">Gestisci Spogliatoio</span>
       </div>
     `;
   }).join('');
@@ -125,12 +135,18 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
   document.getElementById('spog-titolo-partita').innerText = `Darsenal vs ${partita.squadra_avversaria}`;
   document.getElementById('spog-data-partita').innerText = new Date(partita.data_ora).toLocaleString('it-IT');
 
-  // Recupera i presenti per questa partita
+  // Recupera i presenti effettivi dal sondaggio
   const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaId).eq('stato', 'Presente');
-  const presentiList = presenze && presenze.length > 0 ? presenze.map(pr => pr.nome_utente) : giocatoriCacheCassa.slice(0, 12).map(g => g.nome_completo || g.nome);
+
+  let presentiList = [];
+  if (partita.scelte_admin && Array.isArray(partita.scelte_admin) && partita.scelte_admin.length > 0) {
+    presentiList = partita.scelte_admin;
+  } else if (presenze && presenze.length > 0) {
+    presentiList = presenze.map(pr => pr.nome_utente);
+  }
 
   const numPresenti = presentiList.length;
-  const costoCampo = 50; // Costo standard campo
+  const costoCampo = 50;
   const quotaEsatta = numPresenti > 0 ? costoCampo / numPresenti : 0;
   const quotaArrotondata = Math.ceil(quotaEsatta * 10) / 10;
   const cassaGenerata = (quotaArrotondata * numPresenti) - costoCampo;
@@ -140,18 +156,19 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
   document.getElementById('spog-cassa-partita').innerText = `+${cassaGenerata.toFixed(2)} €`;
 
   const container = document.getElementById('spog-lista-giocatori');
-  container.innerHTML = '';
+  if (presentiList.length === 0) {
+    container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">Nessun giocatore risultato presente al sondaggio per questa partita.</div>`;
+    return;
+  }
 
-  presentiList.forEach((nomeGiocatore, idx) => {
-    container.innerHTML += `
-      <div class="p-2.5 grid grid-cols-12 items-center text-xs gap-1" data-giocatore="${escapeHtmlAttr(nomeGiocatore)}">
-        <span class="col-span-4 font-bold text-slate-700 truncate">${nomeGiocatore}</span>
-        <input type="number" step="0.10" id="input-dati-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="${quotaArrotondata.toFixed(2)}" class="col-span-3 p-1.5 bg-slate-50 border rounded-lg text-center font-bold text-xs">
-        <input type="number" step="0.10" id="input-resto-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="0.00" class="col-span-3 p-1.5 bg-slate-50 border rounded-lg text-center font-bold text-xs">
-        <span id="saldo-res-${idx}" class="col-span-2 text-center font-black text-slate-400">0.00 €</span>
-      </div>
-    `;
-  });
+  container.innerHTML = presentiList.map((nomeGiocatore, idx) => `
+    <div class="p-2.5 grid grid-cols-12 items-center text-xs gap-1" data-giocatore="${escapeHtmlAttr(nomeGiocatore)}">
+      <span class="col-span-4 font-bold text-slate-700 truncate">${nomeGiocatore}</span>
+      <input type="number" step="0.10" id="input-dati-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="${quotaArrotondata.toFixed(2)}" class="col-span-3 p-1.5 bg-slate-50 border rounded-lg text-center font-bold text-xs">
+      <input type="number" step="0.10" id="input-resto-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="0.00" class="col-span-3 p-1.5 bg-slate-50 border rounded-lg text-center font-bold text-xs">
+      <span id="saldo-res-${idx}" class="col-span-2 text-center font-black text-slate-400">0.00 €</span>
+    </div>
+  `).join('');
 }
 
 function calcolaRestoRow(idx, quota) {
