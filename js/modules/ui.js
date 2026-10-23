@@ -269,7 +269,7 @@ async function caricaMessaggi() {
     ` : '';
 
     html += `
-      <div class="${cardClass}">
+      <div id="msg-${msg.id}" class="${cardClass}">
         <div class="text-[10px] font-bold text-slate-400 mb-2 flex justify-between items-center border-b border-slate-50 pb-1.5">
           <div class="flex items-center gap-2">
             <span class="flex items-center gap-1.5 text-burgundy font-black">
