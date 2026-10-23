@@ -98,27 +98,39 @@ async function caricaPartiteCassaSupabase() {
     return;
   }
 
-  const adesso = new Date();
-  const partiteTorneoPassate = partite.filter(p => {
-    const d = new Date(p.data_ora);
+  // Filtriamo solo le partite di tipo torneo (o senza tipo specificato), senza bloccare le future
+  const partiteTorneo = partite.filter(p => {
     const isTorneo = !p.tipo_sondaggio || p.tipo_sondaggio === 'torneo';
-    return isTorneo && d <= adesso;
+    return isTorneo;
   });
 
-  if (partiteTorneoPassate.length === 0) {
-    container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita del torneo passata trovata.</div>`;
+  if (partiteTorneo.length === 0) {
+    container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita del torneo trovata.</div>`;
     return;
   }
 
-  container.innerHTML = partiteTorneoPassate.map(p => {
-    const dataFormatted = new Date(p.data_ora).toLocaleDateString('it-IT');
+  const adesso = new Date();
+
+  container.innerHTML = partiteTorneo.map(p => {
+    // Correzione parsing data per evitare sfasamenti di fuso orario
+    const d = new Date(p.data_ora);
+    const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
+    const isPassata = d <= adesso;
+    
+    const badgeStato = isPassata 
+      ? '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">Giocata</span>' 
+      : '<span class="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-black">Da giocare</span>';
+
     return `
-      <div onclick="apriDettaglioSpogliatoioPartita('${p.id}')" class="p-4 rounded-2xl border bg-white border-burgundy border-2 shadow-md cursor-pointer flex justify-between items-center">
+      <div onclick="apriDettaglioSpogliatoioPartita('${p.id}')" class="p-4 rounded-2xl border bg-white border-burgundy border-2 shadow-md cursor-pointer flex justify-between items-center transition-all hover:bg-slate-50">
         <div>
-          <p class="font-black text-xs text-slate-800">vs ${p.squadra_avversaria}</p>
+          <p class="font-black text-xs text-slate-800">Darsenal vs ${p.squadra_avversaria}</p>
           <p class="text-[10px] text-slate-400 font-bold">${dataFormatted}</p>
         </div>
-        <span class="text-[9px] bg-burgundy text-white px-2 py-0.5 rounded-full font-black">Gestisci Spogliatoio</span>
+        <div class="flex items-center gap-2">
+          ${badgeStato}
+          <span class="text-[9px] bg-burgundy text-white px-2 py-0.5 rounded-full font-black">Spogliatoio</span>
+        </div>
       </div>
     `;
   }).join('');
@@ -133,23 +145,32 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
   document.getElementById('vista-dettaglio-partita').classList.remove('hidden');
 
   document.getElementById('spog-titolo-partita').innerText = `Darsenal vs ${partita.squadra_avversaria}`;
-  document.getElementById('spog-data-partita').innerText = new Date(partita.data_ora).toLocaleString('it-IT');
+  
+  const dPartita = new Date(partita.data_ora);
+  const dataOraFormatted = !isNaN(dPartita) ? dPartita.toLocaleString('it-IT', { timeZone: 'UTC' }) : '';
+  document.getElementById('spog-data-partita').innerText = dataOraFormatted;
 
-  // Recupera i presenti effettivi dal sondaggio
+  // Recupera i presenti effettivi dal sondaggio SOLO per questo specifico ID partita
   const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaId).eq('stato', 'Presente');
 
   let presentiList = [];
+  
+  // Se l'admin ha salvato esplicitamente delle scelte (es. i 12 convocati ufficiali), usiamo quelle
   if (partita.scelte_admin && Array.isArray(partita.scelte_admin) && partita.scelte_admin.length > 0) {
     presentiList = partita.scelte_admin;
   } else if (presenze && presenze.length > 0) {
+    // Altrimenti usiamo chi ha votato "Presente" nel sondaggio
     presentiList = presenze.map(pr => pr.nome_utente);
+  } else {
+    // Se la partita è futura e nessuno ha votato (o non c'è sondaggio), la lista deve essere VUOTA (0 giocatori, niente default a 12)
+    presentiList = [];
   }
 
   const numPresenti = presentiList.length;
   const costoCampo = 50;
   const quotaEsatta = numPresenti > 0 ? costoCampo / numPresenti : 0;
   const quotaArrotondata = Math.ceil(quotaEsatta * 10) / 10;
-  const cassaGenerata = (quotaArrotondata * numPresenti) - costoCampo;
+  const cassaGenerata = numPresenti > 0 ? (quotaArrotondata * numPresenti) - costoCampo : 0;
 
   document.getElementById('spog-num-presenti').innerText = numPresenti;
   document.getElementById('spog-quota-testa').innerText = `${quotaArrotondata.toFixed(2)} €`;
@@ -157,7 +178,7 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
 
   const container = document.getElementById('spog-lista-giocatori');
   if (presentiList.length === 0) {
-    container.innerHTML = `<div class="p-4 text-center text-xs text-slate-400">Nessun giocatore risultato presente al sondaggio per questa partita.</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore convocato o presente registrato per questa partita (il sondaggio non è ancora attivo o non ci sono voti).</div>`;
     return;
   }
 
