@@ -50,7 +50,7 @@ async function caricaDatiCassaSupabase() {
   const saldiMap = {};
   giocatori.forEach(g => {
     const nome = g.nome_completo || g.nome;
-    saldiMap[nome.toLowerCase()] = 0;
+    saldiMap[nome.toLowerCase().trim()] = 0;
   });
 
   let totaleCassa = 0;
@@ -77,7 +77,7 @@ async function caricaDatiCassaSupabase() {
 
   container.innerHTML = giocatori.map(g => {
     const nome = g.nome_completo || g.nome;
-    const saldo = saldiMap[nome.toLowerCase()] || 0;
+    const saldo = saldiMap[nome.toLowerCase().trim()] || 0;
     const saldoFormatted = saldo >= 0 ? `+${saldo.toFixed(2)} €` : `${saldo.toFixed(2)} €`;
     const colorClass = saldo > 0 ? 'text-emerald-600 font-black' : (saldo < 0 ? 'text-rose-600 font-black' : 'text-slate-400');
 
@@ -96,8 +96,8 @@ async function caricaPartiteCassaSupabase() {
 
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
 
-  // Leggiamo direttamente dal calendario ufficiale del torneo
-  const { data: partite, error } = await db.from('calendario_torneo').select('*').order('data_ora', { ascending: false });
+  // MODIFICA PUNTO 2: Ordinamento crescente (ascending: true) -> Prima giocata in alto, ultima in basso
+  const { data: partite, error } = await db.from('calendario_torneo').select('*').order('data_ora', { ascending: true });
   if (error || !partite) {
     container.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Errore caricamento.</div>`;
     return;
@@ -117,38 +117,69 @@ async function caricaPartiteCassaSupabase() {
 
   const adesso = new Date();
 
+  // Carica tutti i movimenti per capire quali partite sono già state registrate/salvate
+  const { data: tuttiMovimenti } = await db.from('movimenti_cassa').select('causale');
+  const causaliSalvate = (tuttiMovimenti || []).map(m => (m.causale || '').toLowerCase());
+
   container.innerHTML = partiteDarsenal.map(p => {
     const d = new Date(p.data_ora);
     const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
     const isPassata = d <= adesso;
     const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
-    
-    const badgeStato = isPassata 
-      ? '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">Giocata</span>' 
-      : '<span class="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-black">Da giocare</span>';
+    const giaSalvata = causaliSalvate.some(c => c.includes(avversario.toLowerCase().trim()));
+
+    let badgeStato = '';
+    let cardStyle = '';
+
+    // MODIFICA PUNTO 3: Protezioni visive sulle card
+    if (giaSalvata) {
+      badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">Giocata e Salvata</span>';
+      cardStyle = 'bg-slate-50 border-slate-200 opacity-90 cursor-pointer';
+    } else if (isPassata) {
+      badgeStato = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">Da Registrare</span>';
+      cardStyle = 'bg-white border-burgundy border-2 shadow-md cursor-pointer';
+    } else {
+      badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-black">Prossima</span>';
+      cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
+    }
 
     return `
-      <div onclick="apriDettaglioSpogliatoioPartita('${p.id}')" class="p-4 rounded-2xl border bg-white border-burgundy border-2 shadow-md cursor-pointer flex justify-between items-center transition-all hover:bg-slate-50">
-        <div>
-          <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
-          <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} ${p.giornata ? `- ${p.giornata}` : ''}</p>
-        </div>
-        <div class="flex items-center gap-2">
-          ${badgeStato}
-          <span class="text-[9px] bg-burgundy text-white px-2 py-0.5 rounded-full font-black">Spogliatoio</span>
+      <div onclick="confermaEDettaglioPartita('${p.id}', ${giaSalvata})" class="p-4 rounded-2xl border ${cardStyle} transition-all hover:scale-[1.01]">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} ${p.giornata ? `- ${p.giornata}` : ''}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            ${badgeStato}
+            <span class="text-[9px] bg-burgundy text-white px-2 py-0.5 rounded-full font-black">Spogliatoio</span>
+          </div>
         </div>
       </div>
     `;
   }).join('');
 }
 
+// MODIFICA PUNTO 3: Funzione di protezione prima dell'apertura
+function confermaEDettaglioPartita(partitaId, giaSalvata) {
+  if (giaSalvata) {
+    if (typeof mostraConfirm === 'function') {
+      mostraConfirm("Sei sicuro di voler accedere per visualizzare o modificare una partita con incasso già salvato?", () => {
+        apriDettaglioSpogliatoioPartita(partitaId);
+      });
+    } else if (confirm("Sei sicuro di voler accedere per visualizzare o modificare una partita con incasso già salvato?")) {
+      apriDettaglioSpogliatoioPartita(partitaId);
+    }
+  } else {
+    apriDettaglioSpogliatoioPartita(partitaId);
+  }
+}
+
 async function apriDettaglioSpogliatoioPartita(partitaId) {
-  // 1. Cerca prima nella tabella 'partite' per ID diretto
   let { data: partita } = await db.from('partite').select('*').eq('id', partitaId).single();
   let actualPartitaId = partitaId;
 
   if (!partita) {
-    // 2. Se non è in 'partite', cerchiamo nel calendario e troviamo la corrispondenza in 'partite'
     const { data: cal } = await db.from('calendario_torneo').select('*').eq('id', partitaId).single();
     if (cal) {
       const avversario = cal.squadra_casa.toLowerCase().includes('darsenal') ? cal.squadra_trasferta : cal.squadra_casa;
@@ -192,11 +223,10 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
   const dataOraFormatted = !isNaN(dPartita) ? dPartita.toLocaleString('it-IT', { timeZone: 'UTC' }) : '';
   document.getElementById('spog-data-partita').innerText = dataOraFormatted;
 
-  // Recupera i presenti effettivi dal sondaggio usando l'ID corretto della tabella presenze
+  // Recupera i presenti effettivi dal sondaggio
   const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', actualPartitaId).eq('stato', 'Presente');
 
   let presentiList = [];
-  
   if (partita.scelte_admin && Array.isArray(partita.scelte_admin) && partita.scelte_admin.length > 0) {
     presentiList = partita.scelte_admin;
   } else if (presenze && presenze.length > 0) {
@@ -205,6 +235,7 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
     presentiList = [];
   }
 
+  // MODIFICA PUNTO 3: Logica Arrotondamento dall'HTML di prova
   const numPresenti = presentiList.length;
   const costoCampo = 50;
   const quotaEsatta = numPresenti > 0 ? costoCampo / numPresenti : 0;
@@ -217,26 +248,65 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
 
   const container = document.getElementById('spog-lista-giocatori');
   if (presentiList.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore convocato o presente registrato per questa partita (il sondaggio non è ancora attivo o non ci sono voti).</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore convocato o presente registrato per questa partita.</div>`;
     return;
   }
 
-  container.innerHTML = presentiList.map((nomeGiocatore, idx) => `
-    <div class="p-2.5 grid grid-cols-12 items-center text-xs gap-1" data-giocatore="${escapeHtmlAttr(nomeGiocatore)}">
-      <span class="col-span-4 font-bold text-slate-700 truncate">${nomeGiocatore}</span>
-      <input type="number" step="0.10" id="input-dati-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="${quotaArrotondata.toFixed(2)}" class="col-span-3 p-1.5 bg-slate-50 border rounded-xl text-center font-bold text-xs">
-      <input type="number" step="0.10" id="input-resto-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="0.00" class="col-span-3 p-1.5 bg-slate-50 border rounded-xl text-center font-bold text-xs">
-      <span id="saldo-res-${idx}" class="col-span-2 text-center font-black text-slate-400">0.00 €</span>
-    </div>
-  `).join('');
+  // MODIFICA PUNTO 1: Carichiamo i movimenti salvati in precedenza per pre-compilare gli input
+  const { data: movimentiEsistenti } = await db.from('movimenti_cassa')
+    .select('*')
+    .ilike('causale', `%Partita vs ${partita.squadra_avversaria}%`);
+
+  const movimentiMap = {};
+  if (movimentiEsistenti && movimentiEsistenti.length > 0) {
+    movimentiEsistenti.forEach(m => {
+      movimentiMap[(m.nome_giocatore || '').toLowerCase().trim()] = m;
+    });
+  }
+
+  container.innerHTML = presentiList.map((nomeGiocatore, idx) => {
+    const key = nomeGiocatore.toLowerCase().trim();
+    const mov = movimentiMap[key];
+    
+    // Se la partita era già salvata, calcoliamo a ritroso il dato versato rispetto alla quota
+    let valDati = '';
+    let valResto = '';
+
+    if (mov) {
+      const imp = parseFloat(mov.importo) || 0;
+      const versatoCalcolato = imp + quotaArrotondata;
+      if (versatoCalcolato > 0) {
+        valDati = versatoCalcolato.toFixed(2);
+      }
+    }
+
+    return `
+      <div class="p-2.5 grid grid-cols-12 items-center text-xs gap-1" data-giocatore="${escapeHtmlAttr(nomeGiocatore)}">
+        <span class="col-span-4 font-bold text-slate-700 truncate">${nomeGiocatore}</span>
+        <input type="number" step="0.10" id="input-dati-${idx}" value="${valDati}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="${quotaArrotondata.toFixed(2)}" class="col-span-3 p-1.5 bg-slate-50 border rounded-xl text-center font-bold text-xs">
+        <input type="number" step="0.10" id="input-resto-${idx}" value="${valResto}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="0.00" class="col-span-3 p-1.5 bg-slate-50 border rounded-xl text-center font-bold text-xs">
+        <span id="saldo-res-${idx}" class="col-span-2 text-center font-black text-slate-400">0.00 €</span>
+      </div>
+    `;
+  }).join('');
+
+  // Eseguiamo il calcolo iniziale per aggiornare le etichette dei saldi
+  presentiList.forEach((_, idx) => {
+    calcolaRestoRow(idx, quotaArrotondata);
+  });
 }
 
 function calcolaRestoRow(idx, quota) {
-  const dati = parseFloat(document.getElementById(`input-dati-${idx}`).value) || 0;
-  const restoDato = parseFloat(document.getElementById(`input-resto-${idx}`).value) || 0;
+  const datiInput = document.getElementById(`input-dati-${idx}`);
+  const restoInput = document.getElementById(`input-resto-${idx}`);
+  if (!datiInput || !restoInput) return;
+
+  const dati = parseFloat(datiInput.value) || 0;
+  const restoDato = parseFloat(restoInput.value) || 0;
   
   const risultato = (dati - restoDato) - quota;
   const display = document.getElementById(`saldo-res-${idx}`);
+  if (!display) return;
 
   if (risultato > 0) {
     display.innerText = `+${risultato.toFixed(2)} €`;
@@ -253,6 +323,11 @@ function calcolaRestoRow(idx, quota) {
 async function salvaIncassoPartita() {
   if (!partitaSelezionataCassa) return;
 
+  const causalePartita = `Partita vs ${partitaSelezionataCassa.squadra_avversaria}`;
+
+  // Eliminiamo i vecchi movimenti di questa partita per sovrascrivere pulito
+  await db.from('movimenti_cassa').delete().ilike('causale', `%${causalePartita}%`);
+
   const rows = document.querySelectorAll('#spog-lista-giocatori > div');
   const movimentiDaInserire = [];
 
@@ -266,12 +341,12 @@ async function salvaIncassoPartita() {
     const importoVersatoNetto = (dati - resto);
     const movimentoNetto = importoVersatoNetto - quota;
 
-    if (importoVersatoNetto > 0) {
+    if (dati > 0 || resto > 0 || importoVersatoNetto > 0) {
       numPresenti++;
       movimentiDaInserire.push({
         nome_giocatore: nome,
         importo: movimentoNetto,
-        causale: `Partita vs ${partitaSelezionataCassa.squadra_avversaria}`
+        causale: causalePartita
       });
     }
   });
@@ -286,7 +361,7 @@ async function salvaIncassoPartita() {
     movimentiDaInserire.push({
       nome_giocatore: 'Cassa Squadra',
       importo: cassaGenerata,
-      causale: `Arrotondamento Partita vs ${partitaSelezionataCassa.squadra_avversaria}`
+      causale: `Arrotondamento ${causalePartita}`
     });
   }
 
