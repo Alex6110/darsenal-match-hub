@@ -143,23 +143,46 @@ async function caricaPartiteCassaSupabase() {
 }
 
 async function apriDettaglioSpogliatoioPartita(partitaId) {
+  // 1. Cerca prima nella tabella 'partite' per ID diretto
   let { data: partita } = await db.from('partite').select('*').eq('id', partitaId).single();
+  let actualPartitaId = partitaId;
+
   if (!partita) {
+    // 2. Se non è in 'partite', cerchiamo nel calendario e troviamo la corrispondenza in 'partite'
     const { data: cal } = await db.from('calendario_torneo').select('*').eq('id', partitaId).single();
     if (cal) {
       const avversario = cal.squadra_casa.toLowerCase().includes('darsenal') ? cal.squadra_trasferta : cal.squadra_casa;
-      partita = {
-        id: cal.id,
-        squadra_avversaria: avversario,
-        data_ora: cal.data_ora,
-        luogo: cal.luogo
-      };
+      
+      const { data: matchPartite } = await db.from('partite').select('*');
+      if (matchPartite && matchPartite.length > 0) {
+        const found = matchPartite.find(p => 
+          (p.squadra_avversaria || '').toLowerCase().trim() === avversario.toLowerCase().trim() ||
+          (p.squadra_avversaria || '').toLowerCase().includes(avversario.toLowerCase()) ||
+          avversario.toLowerCase().includes((p.squadra_avversaria || '').toLowerCase())
+        );
+        if (found) {
+          partita = found;
+          actualPartitaId = found.id;
+        }
+      }
+
+      if (!partita) {
+        partita = {
+          id: cal.id,
+          squadra_avversaria: avversario,
+          data_ora: cal.data_ora,
+          luogo: cal.luogo
+        };
+        actualPartitaId = cal.id;
+      }
     }
+  } else {
+    actualPartitaId = partita.id;
   }
+
   if (!partita) return;
   partitaSelezionataCassa = partita;
 
-  partitaSelezionataCassa = partita;
   document.getElementById('vista-elenco-partite').classList.add('hidden');
   document.getElementById('vista-dettaglio-partita').classList.remove('hidden');
 
@@ -169,19 +192,16 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
   const dataOraFormatted = !isNaN(dPartita) ? dPartita.toLocaleString('it-IT', { timeZone: 'UTC' }) : '';
   document.getElementById('spog-data-partita').innerText = dataOraFormatted;
 
-  // Recupera i presenti effettivi dal sondaggio SOLO per questo specifico ID partita
-  const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaId).eq('stato', 'Presente');
+  // Recupera i presenti effettivi dal sondaggio usando l'ID corretto della tabella presenze
+  const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', actualPartitaId).eq('stato', 'Presente');
 
   let presentiList = [];
   
-  // Se l'admin ha salvato esplicitamente delle scelte (es. i 12 convocati ufficiali), usiamo quelle
   if (partita.scelte_admin && Array.isArray(partita.scelte_admin) && partita.scelte_admin.length > 0) {
     presentiList = partita.scelte_admin;
   } else if (presenze && presenze.length > 0) {
-    // Altrimenti usiamo chi ha votato "Presente" nel sondaggio
     presentiList = presenze.map(pr => pr.nome_utente);
   } else {
-    // Se la partita è futura e nessuno ha votato (o non c'è sondaggio), la lista deve essere VUOTA (0 giocatori, niente default a 12)
     presentiList = [];
   }
 
@@ -204,8 +224,8 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
   container.innerHTML = presentiList.map((nomeGiocatore, idx) => `
     <div class="p-2.5 grid grid-cols-12 items-center text-xs gap-1" data-giocatore="${escapeHtmlAttr(nomeGiocatore)}">
       <span class="col-span-4 font-bold text-slate-700 truncate">${nomeGiocatore}</span>
-      <input type="number" step="0.10" id="input-dati-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="${quotaArrotondata.toFixed(2)}" class="col-span-3 p-1.5 bg-slate-50 border rounded-lg text-center font-bold text-xs">
-      <input type="number" step="0.10" id="input-resto-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="0.00" class="col-span-3 p-1.5 bg-slate-50 border rounded-lg text-center font-bold text-xs">
+      <input type="number" step="0.10" id="input-dati-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="${quotaArrotondata.toFixed(2)}" class="col-span-3 p-1.5 bg-slate-50 border rounded-xl text-center font-bold text-xs">
+      <input type="number" step="0.10" id="input-resto-${idx}" oninput="calcolaRestoRow(${idx}, ${quotaArrotondata})" placeholder="0.00" class="col-span-3 p-1.5 bg-slate-50 border rounded-xl text-center font-bold text-xs">
       <span id="saldo-res-${idx}" class="col-span-2 text-center font-black text-slate-400">0.00 €</span>
     </div>
   `).join('');
