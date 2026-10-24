@@ -110,18 +110,22 @@ function applicaStatoUtente() {
     if (menuInitials) menuInitials.innerText = '--';
     if (menuName) menuName.innerText = 'Utente';
   }
-  
+
   // VISIBILITÀ ELEMENTI ADMIN
   if (isAdmin) {
     document.getElementById('admin-partita-btn-container')?.classList.remove('hidden');
     document.getElementById('admin-classifica-btn')?.classList.remove('hidden');
     document.getElementById('admin-msg-btn')?.classList.remove('hidden');
     document.getElementById('btn-tab-giocatore')?.classList.remove('hidden');
+    document.getElementById('container-tab-cassa')?.classList.remove('hidden');
   } else {
     document.getElementById('admin-partita-btn-container')?.classList.add('hidden');
     document.getElementById('admin-classifica-btn')?.classList.add('hidden');
     document.getElementById('admin-msg-btn')?.classList.add('hidden');
     document.getElementById('btn-tab-giocatore')?.classList.add('hidden');
+    
+    // Se l'utente non è admin, nascondi l'intero contenitore del selettore tab della cassa
+    document.getElementById('container-tab-cassa')?.classList.add('hidden');
     
     // Forza il ritorno alla vista cassa "Squadra" per evitare residui admin
     if (typeof switchTabCassa === 'function') {
