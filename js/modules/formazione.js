@@ -184,42 +184,77 @@ window.toggleModalitaSpostamento = function() {
 
 // Modifica a caricaDatiFormazione per leggere prima la tabella formati_partite
 async function caricaDatiFormazione() {
-  const adesso = new Date().toISOString();
+  const adesso = new Date();
 
-  let { data: partiteFuture } = await db.from('partite')
+  // 1. Cerca la prossima partita futura in calendario_torneo, oppure l'ultima giocata
+  let { data: calFuture } = await db.from('calendario_torneo')
     .select('*')
-    .gte('data_ora', adesso)
+    .gte('data_ora', adesso.toISOString())
     .order('data_ora', { ascending: true })
     .limit(1);
 
-  let partitaCorrente = partiteFuture && partiteFuture.length > 0 ? partiteFuture[0] : null;
+  let matchTrovato = calFuture && calFuture.length > 0 ? calFuture[0] : null;
 
-  if (!partitaCorrente) {
-    const { data: tuttePartite } = await db.from('partite')
+  if (!matchTrovato) {
+    let { data: calTutte } = await db.from('calendario_torneo')
       .select('*')
       .order('data_ora', { ascending: false })
       .limit(1);
-    if (tuttePartite && tuttePartite.length > 0) {
-      partitaCorrente = tuttePartite[0];
+    if (calTutte && calTutte.length > 0) matchTrovato = calTutte[0];
+  }
+
+  // Se non trovata in calendario_torneo, cerca in partite (amichevoli)
+  if (!matchTrovato) {
+    let { data: partiteFuture } = await db.from('partite')
+      .select('*')
+      .gte('data_ora', adesso.toISOString())
+      .order('data_ora', { ascending: true })
+      .limit(1);
+    matchTrovato = partiteFuture && partiteFuture.length > 0 ? partiteFuture[0] : null;
+    if (!matchTrovato) {
+      let { data: tuttePartite } = await db.from('partite')
+        .select('*')
+        .order('data_ora', { ascending: false })
+        .limit(1);
+      matchTrovato = tuttePartite && tuttePartite.length > 0 ? tuttePartite[0] : null;
     }
   }
 
-  if (!partitaCorrente) return;
-  partitaCorrenteId = partitaCorrente.id;
+  if (!matchTrovato) return;
+  partitaCorrenteId = matchTrovato.id;
 
-  // Recupera i presenti aggiornati dal sondaggio
-  const { data: presenze } = await db.from('presenze')
+  // Cerca il sondaggio corrispondente nella tabella partite tramite data_ora
+  let sondaggioId = null;
+  if (matchTrovato.data_ora) {
+    const { data: sondaggio } = await db.from('partite')
+      .select('id')
+      .eq('data_ora', matchTrovato.data_ora)
+      .maybeSingle();
+    if (sondaggio) sondaggioId = sondaggio.id;
+  }
+
+  // Recupera tutte le presenze e filtra verificando sia l'ID calendario che l'ID sondaggio
+  const { data: tuttePresenze } = await db.from('presenze')
     .select('*')
-    .eq('id_partita', partitaCorrente.id)
     .eq('stato', 'Presente');
 
-  let convocatiNomi = (presenze || []).map(p => p.nome_utente);
+  const idsPossibili = [matchTrovato.id];
+  if (sondaggioId) idsPossibili.push(sondaggioId);
 
-  // Controlla la formazione salvata
-  const { data: formazioneSalvata } = await db.from('formazioni_partite')
+  const presenze = (tuttePresenze || []).filter(pr => {
+    const pid = pr.id_partita || pr.id_sondaggio || pr.partita_id;
+    return idsPossibili.includes(pid);
+  });
+
+  let convocatiNomi = presenze.map(p => p.nome_utente);
+
+  // Controlla la formazione salvata usando .maybeSingle() per evitare il 406 se non esiste
+  const { data: formaciónSalvata } = await db.from('formazioni_partite')
     .select('*')
     .eq('id_partita', partitaCorrenteId)
-    .single();
+    .maybeSingle();
+
+  const formazioneSalvata = formaciónSalvata;
 
   if (formazioneSalvata) {
     moduloAttivo = formazioneSalvata.modulo || '2-3-1';
@@ -234,7 +269,7 @@ async function caricaDatiFormazione() {
     });
     riserveLista = riserveLista.filter(r => convocatiNomi.includes(r.nome));
 
-    // 2. CORREZIONE PORTIERE: Se lo slot 0 è vuoto o il portiere è assente, assegna il nuovo portiere disponibile
+    // 2. CORREZIONE PORTIERE
     const portiereAttuale = formazioneTitolari[0];
     if (!portiereAttuale || portiereAttuale.nome === 'Vuoto' || !convocatiNomi.includes(portiereAttuale.nome)) {
       let anagrafica = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
@@ -261,7 +296,7 @@ async function caricaDatiFormazione() {
       }
     }
 
-    // 3. Aggiunge automaticamente eventuali nuovi convocati non ancora presenti in formazione/panchina
+    // 3. Aggiunge automaticamente i nuovi convocati non ancora presenti
     const tuttiPresentiInFormazione = [
       ...Object.values(formazioneTitolari).map(t => t?.nome),
       ...riserveLista.map(r => r?.nome)
@@ -285,7 +320,7 @@ async function caricaDatiFormazione() {
     return;
   }
 
-  // Generazione automatica iniziale dai presenti...
+  // Generazione automatica iniziale dai presenti se non esiste una formazione salvata
   let listaGiocatori = convocatiNomi.map(nome => {
     const anagrafica = (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
     const g = anagrafica.find(item => (item.nome_completo || item.nome)?.toLowerCase().trim() === nome.toLowerCase().trim());
