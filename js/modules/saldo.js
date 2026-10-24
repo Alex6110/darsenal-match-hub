@@ -8,17 +8,22 @@ function apriSezioneCassa() {
 }
 
 function switchTabCassa(tab) {
+  // Controllo di sicurezza
+  if (tab === 'giocatore' && typeof isAdmin !== 'undefined' && !isAdmin) {
+    tab = 'squadra';
+  }
+
   if (tab === 'squadra') {
-    document.getElementById('tab-squadra-view').classList.remove('hidden');
-    document.getElementById('tab-giocatore-view').classList.add('hidden');
-    document.getElementById('btn-tab-squadra').className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
-    document.getElementById('btn-tab-giocatore').className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center gap-1";
+    document.getElementById('tab-squadra-view')?.classList.remove('hidden');
+    document.getElementById('tab-giocatore-view')?.classList.add('hidden');
+    document.getElementById('btn-tab-squadra') && (document.getElementById('btn-tab-squadra').className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all");
+    document.getElementById('btn-tab-giocatore') && (document.getElementById('btn-tab-giocatore').className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all flex items-center justify-center gap-1");
     caricaDatiCassaSupabase();
   } else {
-    document.getElementById('tab-squadra-view').classList.add('hidden');
-    document.getElementById('tab-giocatore-view').classList.remove('hidden');
-    document.getElementById('btn-tab-giocatore').className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all flex items-center justify-center gap-1";
-    document.getElementById('btn-tab-squadra').className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    document.getElementById('tab-squadra-view')?.classList.add('hidden');
+    document.getElementById('tab-giocatore-view')?.classList.remove('hidden');
+    document.getElementById('btn-tab-giocatore') && (document.getElementById('btn-tab-giocatore').className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all flex items-center justify-center gap-1");
+    document.getElementById('btn-tab-squadra') && (document.getElementById('btn-tab-squadra').className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all");
     caricaPartiteCassaSupabase();
   }
 }

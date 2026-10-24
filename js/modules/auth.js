@@ -110,7 +110,7 @@ function applicaStatoUtente() {
     if (menuInitials) menuInitials.innerText = '--';
     if (menuName) menuName.innerText = 'Utente';
   }
-
+  
   // VISIBILITÀ ELEMENTI ADMIN
   if (isAdmin) {
     document.getElementById('admin-partita-btn-container')?.classList.remove('hidden');
@@ -122,6 +122,11 @@ function applicaStatoUtente() {
     document.getElementById('admin-classifica-btn')?.classList.add('hidden');
     document.getElementById('admin-msg-btn')?.classList.add('hidden');
     document.getElementById('btn-tab-giocatore')?.classList.add('hidden');
+    
+    // Forza il ritorno alla vista cassa "Squadra" per evitare residui admin
+    if (typeof switchTabCassa === 'function') {
+      switchTabCassa('squadra');
+    }
   }
 
   // "Info Tutti i Giocatori" visibile a TUTTI gli utenti
