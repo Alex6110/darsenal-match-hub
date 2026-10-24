@@ -108,7 +108,6 @@ async function caricaPartiteCassaSupabase() {
 
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
 
-  // MODIFICA PUNTO 2: Ordinamento crescente (ascending: true) -> Prima giocata in alto, ultima in basso
   const { data: partite, error } = await db.from('calendario_torneo').select('*').order('data_ora', { ascending: true });
   if (error || !partite) {
     container.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Errore caricamento.</div>`;
@@ -133,38 +132,58 @@ async function caricaPartiteCassaSupabase() {
   const { data: tuttiMovimenti } = await db.from('movimenti_cassa').select('causale');
   const causaliSalvate = (tuttiMovimenti || []).map(m => (m.causale || '').toLowerCase());
 
+  // Troviamo l'indice della PRIMA partita futura non ancora salvata (la vera "Prossima")
+  let indexProssimaTrovata = false;
+
   container.innerHTML = partiteDarsenal.map(p => {
     const d = new Date(p.data_ora);
-    const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
+    // CORRETTO PUNTO 1: Rimosso timeZone UTC per mostrare l'orario locale corretto
+    const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
+    const oraFormatted = !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+    
     const isPassata = d <= adesso;
     const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
     const giaSalvata = causaliSalvate.some(c => c.includes(avversario.toLowerCase().trim()));
 
     let badgeStato = '';
     let cardStyle = '';
+    let clickAction = '';
 
-    // MODIFICA PUNTO 3: Protezioni visive sulle card
     if (giaSalvata) {
-      badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full font-bold">Giocata e Salvata</span>';
+      // Giocata e salvata in passato
+      badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">Giocata e Salvata</span>';
       cardStyle = 'bg-slate-50 border-slate-200 opacity-90 cursor-pointer';
+      clickAction = `onclick="confermaEDettaglioPartita('${p.id}', true)"`;
     } else if (isPassata) {
-      badgeStato = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-black">Da Registrare</span>';
+      // Passata ma non registrata
+      badgeStato = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-black">Da Registrare</span>';
       cardStyle = 'bg-white border-burgundy border-2 shadow-md cursor-pointer';
+      clickAction = `onclick="confermaEDettaglioPartita('${p.id}', false)"`;
     } else {
-      badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-black">Prossima</span>';
-      cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
+      // Partita futura (non ancora passata)
+      if (!indexProssimaTrovata) {
+        // Questa è LA PROSSIMA partita giocabile
+        indexProssimaTrovata = true;
+        badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-black">Prossima</span>';
+        cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
+        clickAction = `onclick="confermaEDettaglioPartita('${p.id}', false)"`;
+      } else {
+        // Le successive partite future: bloccate, non cliccabili e con grigio differente
+        badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-500 px-2.5 py-0.5 rounded-full font-bold">Da giocare</span>';
+        cardStyle = 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed';
+        clickAction = ''; // Nessun click
+      }
     }
 
     return `
-      <div onclick="confermaEDettaglioPartita('${p.id}', ${giaSalvata})" class="p-4 rounded-2xl border ${cardStyle} transition-all hover:scale-[1.01]">
+      <div ${clickAction} class="p-4 rounded-2xl border ${cardStyle} transition-all hover:scale-[1.01]">
         <div class="flex justify-between items-center">
           <div>
             <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
-            <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} ${p.giornata ? `- ${p.giornata}` : ''}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} alle ${oraFormatted} ${p.giornata ? `- ${p.giornata}` : ''}</p>
           </div>
           <div class="flex items-center gap-2">
             ${badgeStato}
-            <span class="text-[9px] bg-burgundy text-white px-2 py-0.5 rounded-full font-black">Spogliatoio</span>
           </div>
         </div>
       </div>
