@@ -199,3 +199,180 @@ async function apriPaginaAdminGiocatori() {
     tbody.innerHTML = `<tr><td colspan="7" class="text-center text-xs text-rose-500 py-4">Errore caricamento dati.</td></tr>`;
   }
 }
+
+
+// Variabile di supporto per la partita selezionata nelle assenze
+let partitaSelezionataAssenze = null;
+
+// Gestione dei tab all'interno della modale Info Giocatori / Assenze
+function switchTabGiocatoriAdmin(tab) {
+  const btnInfo = document.getElementById('btn-tab-giocatori-info');
+  const btnAssenze = document.getElementById('btn-tab-giocatori-assenze');
+  const viewInfo = document.getElementById('tab-giocatori-info-view');
+  const viewAssenze = document.getElementById('tab-giocatori-assenze-view');
+
+  if (tab === 'info') {
+    viewInfo?.classList.remove('hidden');
+    viewAssenze?.classList.add('hidden');
+    btnInfo?.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
+    btnAssenze?.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    apriPaginaAdminGiocatori(); // ricarica tabella info
+  } else {
+    viewInfo?.classList.add('hidden');
+    viewAssenze?.classList.remove('hidden');
+    btnAssenze?.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
+    btnInfo?.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    caricaPartiteAssenzeSupabase();
+  }
+}
+
+// Carica l'elenco delle partite con lo stesso stile della sezione Cassa/Saldo
+async function caricaPartiteAssenzeSupabase() {
+  const container = document.getElementById('vista-elenco-partite-assenze');
+  if (!container) return;
+
+  container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
+
+  const { data: partite, error } = await db.from('calendario_torneo').select('*').order('data_ora', { ascending: true });
+  if (error || !partite) {
+    container.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Errore caricamento calendario.</div>`;
+    return;
+  }
+
+  const partiteDarsenal = partite.filter(p => {
+    const casa = (p.squadra_casa || '').toLowerCase();
+    const trasf = (p.squadra_trasferta || '').toLowerCase();
+    return casa.includes('darsenal') || trasf.includes('darsenal');
+  });
+
+  if (partiteDarsenal.length === 0) {
+    container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita trovata.</div>`;
+    return;
+  }
+
+  container.innerHTML = partiteDarsenal.map(p => {
+    const d = new Date(p.data_ora);
+    const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const oraFormatted = !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+    const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
+
+    return `
+      <div onclick="apriDettaglioPartitaAssenze('${p.id}', '${escapeHtmlAttr(avversario)}', '${p.data_ora}')" class="p-4 rounded-2xl border bg-white border-slate-200 shadow-sm cursor-pointer transition-all hover:scale-[1.01]">
+        <div class="flex justify-between items-center">
+          <div>
+            <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} alle ${oraFormatted}</p>
+          </div>
+          <span class="text-[9px] bg-burgundy/10 text-burgundy px-2.5 py-0.5 rounded-full font-black">Gestisci Assenze</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Mostra il dettaglio con i giocatori non presenti e i selettori Indisponibile / Escluso
+async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
+  partitaSelezionataAssenze = { id: partitaId, avversario, dataOra };
+
+  document.getElementById('vista-elenco-partite-assenze').classList.add('hidden');
+  document.getElementById('vista-dettaglio-partita-assenze').classList.remove('hidden');
+
+  document.getElementById('assenze-titolo-partita').innerText = `Darsenal vs ${avversario}`;
+  const d = new Date(dataOra);
+  document.getElementById('assenze-data-partita').innerText = !isNaN(d) ? d.toLocaleString('it-IT') : '';
+
+  const container = document.getElementById('assenze-lista-giocatori');
+  container.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">Caricamento giocatori...</div>`;
+
+  // Carica tutti i giocatori della rosa
+  let giocatori = typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : [];
+  const { data: dbG } = await db.from('giocatori').select('*');
+  if (dbG && dbG.length > 0) giocatori = dbG;
+
+  // Carica le presenze registrate per questa partita
+  const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaId);
+  const presenzeMap = {};
+  (presenze || []).forEach(pr => {
+    presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato; // 'Presente', 'Assente', 'Escluso'
+  });
+
+  // Filtra SOLO i giocatori che NON sono presenti (quindi Assenti o Esclusi o non registrati)
+  const giocatoriNonPresenti = giocatori.filter(g => {
+    const nome = g.nome_completo || g.nome;
+    const stato = presenzeMap[nome.toLowerCase().trim()];
+    return stato !== 'Presente';
+  });
+
+  if (giocatoriNonPresenti.length === 0) {
+    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Tutti i giocatori sono stati presenti a questa partita!</div>`;
+    return;
+  }
+
+  container.innerHTML = giocatoriNonPresenti.map((g, idx) => {
+    const nome = g.nome_completo || g.nome;
+    const statoCorrente = presenzeMap[nome.toLowerCase().trim()];
+    // Se lo stato salvato è 'Escluso' usiamo quello, altrimenti default 'Assente' (Indisponibile)
+    const isEscluso = statoCorrente === 'Escluso';
+
+    return `
+      <div class="p-3 flex justify-between items-center text-xs gap-2" data-giocatore-assente="${escapeHtmlAttr(nome)}">
+        <span class="font-bold text-slate-700 truncate w-1/2">${nome}</span>
+        <select id="select-assenza-${idx}" class="w-1/2 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-burgundy cursor-pointer">
+          <option value="Assente" ${!isEscluso ? 'selected' : ''}>Indisponibilità</option>
+          <option value="Escluso" ${isEscluso ? 'selected' : ''}>Esclusione (+1 pt)</option>
+        </select>
+      </div>
+    `;
+  }).join('');
+}
+
+function chiudiDettaglioPartitaAssenze() {
+  document.getElementById('vista-dettaglio-partita-assenze').classList.add('hidden');
+  document.getElementById('vista-elenco-partite-assenze').classList.remove('hidden');
+}
+
+// Salva le decisioni e aggiorna il database e le statistiche esclusioni
+async function salvaAssenzePartita() {
+  if (!partitaSelezionataAssenze) return;
+
+  const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
+  const partiteId = partitaSelezionataAssenze.id;
+
+  for (let idx = 0; idx < rows.length; idx++) {
+    const row = rows[idx];
+    const nome = row.getAttribute('data-giocatore-assente');
+    const selectEl = document.getElementById(`select-assenza-${idx}`);
+    const nuovoStato = selectEl ? selectEl.value : 'Assente'; // 'Escluso' o 'Assente'
+
+    if (nome) {
+      // Verifica se esiste già un record presenze per questo utente e partita
+      const { data: esiste } = await db.from('presenze')
+        .select('*')
+        .eq('id_partita', partiteId)
+        .ilike('nome_utente', nome);
+
+      if (esiste && esiste.length > 0) {
+        await db.from('presenze')
+          .update({ stato: nuovoStato })
+          .eq('id_partita', partiteId)
+          .ilike('nome_utente', nome);
+      } else {
+        await db.from('presenze').insert([{
+          id_partita: partiteId,
+          nome_utente: nome,
+          stato: nuovoStato
+        }]);
+      }
+    }
+  }
+
+  mostraAlert("Assenze ed esclusioni salvate con successo!");
+  chiudiDettaglioPartitaAssenze();
+  caricaPartiteAssenzeSupabase();
+}
+
+// Helper di sicurezza per attributi HTML
+function escapeHtmlAttr(str) {
+  if (!str) return '';
+  return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
