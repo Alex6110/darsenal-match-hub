@@ -1161,7 +1161,9 @@ async function switchTab(tabName) {
       activeBtn.classList.remove('text-slate-400');
     }
   }
-
+  if (tabName === 'giocatori') {
+    if (typeof switchTabGiocatori === 'function') switchTabGiocatori('info');
+  }
   if (tabName === 'partite') {
     if (typeof caricaFasi === 'function') caricaFasi();
     if (typeof caricaPartite === 'function') caricaPartite();

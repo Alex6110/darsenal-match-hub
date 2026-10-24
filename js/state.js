@@ -99,4 +99,5 @@ function caricaDatiPerTab(tab) {
   else if (tab === 'classifica' && typeof caricaClassifica === 'function') caricaClassifica();
   else if (tab === 'sondaggi' && typeof caricaSondaggi === 'function') caricaSondaggi();
   else if (tab === 'saldo' && typeof caricaDatiCassaSupabase === 'function') caricaDatiCassaSupabase();
+  else if (tab === 'giocatori' && typeof caricaTabellaGiocatoriInfo === 'function') caricaTabellaGiocatoriInfo();
 }

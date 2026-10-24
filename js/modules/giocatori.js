@@ -220,8 +220,8 @@ async function caricaTabellaGiocatoriInfo() {
       return `
         <tr class="${bgRowClass} hover:bg-slate-100/80 transition-colors">
           <td class="p-2.5 pl-3">
-            <span class="font-black text-slate-900 block leading-tight uppercase">${cognome}</span>
-            <span class="text-[11px] text-slate-500 font-semibold block leading-tight">${nomeProprio}</span>
+            <span class="font-bold text-slate-800 text-xs block leading-tight">${cognome}</span>
+            <span class="font-bold text-slate-600 text-xs block leading-tight">${nomeProprio}</span>
           </td>
           <td class="p-2 text-center font-bold text-slate-700">${presenzeFormatte}</td>
           <td class="p-2 text-center text-slate-500 font-semibold">${esclusioni} / ${assenzeTotali}</td>
