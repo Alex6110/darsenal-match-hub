@@ -548,6 +548,82 @@
       </div>
     </section>
 
+
+    <!-- VISTA GIOCATORI & ASSENZE -->
+    <section id="view-giocatori" class="hidden space-y-4 pb-24">
+
+      <!-- SELETTORE A SCHEDA: INFO / ASSENZE -->
+      <div id="container-tab-giocatori" class="flex bg-slate-200 p-1 rounded-xl text-xs font-black">
+        <button id="btn-tab-giocatori-info" onclick="switchTabGiocatori('info')" class="flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all">
+          Info Giocatori
+        </button>
+        <button id="btn-tab-giocatori-assenze" onclick="switchTabGiocatori('assenze')" class="hidden flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all">
+          Gestione Assenze
+        </button>
+      </div>
+
+      <!-- VISTA 1: TAB INFO GIOCATORI -->
+      <div id="tab-giocatori-info-view" class="space-y-4">
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-4 border-b border-slate-100 flex justify-between items-center">
+            <h3 class="font-black text-xs text-slate-700 uppercase tracking-wider">Statistiche Giocatori</h3>
+          </div>
+          <div class="overflow-x-auto overflow-y-auto max-h-[60vh]">
+            <table class="w-full text-left text-xs min-w-[550px]">
+              <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr>
+                  <th class="p-3">Giocatore</th>
+                  <th class="p-3 text-center" title="Presenze Totali">Pres</th>
+                  <th class="p-3 text-center" title="Esclusioni / Assenze">Esc / Ass</th>
+                  <th class="p-3 text-center" title="Ultima Partita">Ultima</th>
+                  <th class="p-3 text-center font-black text-burgundy" title="Gol Segnati">Gol</th>
+                  <th class="p-3 text-center text-amber-500" title="Cartellini Gialli">🟨</th>
+                  <th class="p-3 text-center text-rose-600" title="Cartellini Rossi">🟥</th>
+                </tr>
+              </thead>
+              <tbody id="admin-giocatori-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
+                <tr>
+                  <td colspan="7" class="text-center text-xs text-slate-400 py-6">Caricamento statistiche...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- VISTA 2: TAB ASSENZE (SOLO ADMIN) -->
+      <div id="tab-giocatori-assenze-view" class="hidden space-y-4">
+        <!-- VISTA ELENCO PARTITE ASSENZE -->
+        <div id="vista-elenco-partite-assenze" class="space-y-2.5">
+          <!-- Popolato via JS -->
+        </div>
+
+        <!-- VISTA DETTAGLIO PARTITA ASSENZE -->
+        <div id="vista-dettaglio-partita-assenze" class="hidden space-y-4">
+          <button onclick="chiudiDettaglioPartitaAssenze()" class="text-xs font-bold text-burgundy flex items-center gap-1 hover:underline">
+            &larr; Torna all'elenco partite
+          </button>
+          <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+            <h4 id="assenze-titolo-partita" class="font-black text-sm text-slate-800">Partita</h4>
+            <p id="assenze-data-partita" class="text-[10px] font-bold text-slate-400">Data</p>
+          </div>
+          <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+              Giocatori Non Presenti
+            </div>
+            <div id="assenze-lista-giocatori" class="divide-y divide-slate-100 max-h-[45vh] overflow-y-auto">
+              <!-- Popolato via JS -->
+            </div>
+          </div>
+          <button onclick="salvaAssenzePartita()" class="w-full py-3.5 bg-burgundy text-white font-black text-xs rounded-2xl shadow-lg hover:bg-burgundy-dark transition">
+            Salva Assenze / Esclusioni
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+
     <!-- VISTA SALDO / CASSA -->
     <section id="view-saldo" class="hidden space-y-4 pb-24">
       
@@ -1041,9 +1117,9 @@
       </div>
 
       <!-- VOCE CASSA & SALDO SQUADRA NEL MENU LATERALE -->
-      <button onclick="chiudiMenuUtente(); switchTab('saldo'); apriSezioneCassa();" class="w-full py-3 mt-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center gap-2 transition-all">
-        <svg class="w-5 h-5 text-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        <span class="font-bold text-xs text-burgundy uppercase tracking-wider">Cassa & Saldo Squadra</span>
+      <button onclick="chiudiMenuUtente(); apriSezioneGiocatori();" class="w-full py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-2xl flex items-center justify-center gap-2 transition-all">
+        <svg class="w-5 h-5 text-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        <span class="font-bold text-xs text-burgundy uppercase tracking-wider">Info Tutti i Giocatori</span>
       </button>
     </div>
 
@@ -1054,85 +1130,6 @@
       </button>
     </div>
   </aside>
-
-  <!-- MODALE INFO GIOCATORI E GESTIONE ASSENZE -->
-  <div id="admin-giocatori-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 z-50">
-    <div class="bg-white p-5 rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-100 relative space-y-4 max-h-[90vh] flex flex-col">
-      
-      <!-- Intestazione -->
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
-        <div>
-          <h3 class="font-black text-slate-900 text-base">Info Tutti i Giocatori</h3>
-          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Statistiche e Gestione Assenze</p>
-        </div>
-        <button onclick="document.getElementById('admin-giocatori-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 font-bold text-lg w-7 h-7 flex items-center justify-center rounded-full bg-slate-100">✕</button>
-      </div>
-
-      <!-- SELETTORE A SCHEDA: INFO / ASSENZE (Visibile all'admin, o solo tabella per utenti base) -->
-      <div id="container-tab-giocatori-admin" class="hidden flex bg-slate-200 p-1 rounded-xl text-xs font-black shrink-0">
-        <button id="btn-tab-giocatori-info" onclick="switchTabGiocatoriAdmin('info')" class="flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all">
-          Info Giocatori
-        </button>
-        <button id="btn-tab-giocatori-assenze" onclick="switchTabGiocatoriAdmin('assenze')" class="flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all">
-          Gestione Assenze
-        </button>
-      </div>
-
-      <!-- VISTA TAB INFO (Tabella Giocatori) -->
-      <div id="tab-giocatori-info-view" class="overflow-x-auto overflow-y-auto flex-1 rounded-2xl border border-slate-100">
-        <table class="w-full text-left text-xs min-w-[550px]">
-          <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            <tr>
-              <th class="p-3">Giocatore</th>
-              <th class="p-3 text-center" title="Presenze Totali">Pres</th>
-              <th class="p-3 text-center" title="Esclusioni / Assenze">Esc / Ass</th>
-              <th class="p-3 text-center" title="Ultima Partita">Ultima</th>
-              <th class="p-3 text-center font-black text-burgundy" title="Gol Segnati">Gol</th>
-              <th class="p-3 text-center text-amber-500" title="Cartellini Gialli">🟨</th>
-              <th class="p-3 text-center text-rose-600" title="Cartellini Rossi">🟥</th>
-            </tr>
-          </thead>
-          <tbody id="admin-giocatori-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
-            <tr>
-              <td colspan="7" class="text-center text-xs text-slate-400 py-6">Caricamento statistiche...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- VISTA TAB ASSENZE (Gestione Partite e Selettori Non Disponibile / Escluso) -->
-      <div id="tab-giocatori-assenze-view" class="hidden space-y-3 overflow-y-auto flex-1 pr-1">
-        <!-- Elenco Partite (Stile Cassa) -->
-        <div id="vista-elenco-partite-assenze" class="space-y-2.5">
-          <!-- Popolato via JS -->
-        </div>
-
-        <!-- Dettaglio Partita Selezionata (Lista Assenti con Selettore) -->
-        <div id="vista-dettaglio-partita-assenze" class="hidden space-y-4">
-          <button onclick="chiudiDettaglioPartitaAssenze()" class="text-xs font-bold text-burgundy flex items-center gap-1 hover:underline">
-            &larr; Torna all'elenco partite
-          </button>
-          <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
-            <h4 id="assenze-titolo-partita" class="font-black text-sm text-slate-800">Partita</h4>
-            <p id="assenze-data-partita" class="text-[10px] font-bold text-slate-400">Data</p>
-          </div>
-          <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="p-3 bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-              Giocatori Non Presenti
-            </div>
-            <div id="assenze-lista-giocatori" class="divide-y divide-slate-100 max-h-[45vh] overflow-y-auto">
-              <!-- Popolato via JS -->
-            </div>
-          </div>
-          <button onclick="salvaAssenzePartita()" class="w-full py-3.5 bg-burgundy text-white font-black text-xs rounded-2xl shadow-lg hover:bg-burgundy-dark transition">
-            Salva Assenze / Esclusioni
-          </button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
 
   <div id="nuova-fase-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="bg-white p-6 rounded-3xl w-full max-w-xs shadow-2xl border border-slate-100 relative space-y-4">

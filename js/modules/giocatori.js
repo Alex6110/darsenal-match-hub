@@ -89,24 +89,54 @@ async function caricaStatisticheUtente(nomeUtente) {
   }
 }
 
-// Apre la modale e popola la tabella con le info di tutti i giocatori
-async function apriPaginaAdminGiocatori() {
-  const modal = document.getElementById('admin-giocatori-modal');
-  const tbody = document.getElementById('admin-giocatori-tbody');
-  const tabAdminContainer = document.getElementById('container-tab-giocatori-admin');
-
-  if (!modal || !tbody) return;
-
-  if (tabAdminContainer) {
+// Apre la sezione Giocatori come pagina principale (stile saldo.js)
+function apriSezioneGiocatori() {
+  switchTab('giocatori');
+  switchTabGiocatori('info');
+  
+  // Mostra o nasconde la tab assenze in base ai permessi admin
+  const btnTabAssenze = document.getElementById('btn-tab-giocatori-assenze');
+  if (btnTabAssenze) {
     if (typeof isAdmin !== 'undefined' && isAdmin) {
-      tabAdminContainer.classList.remove('hidden');
+      btnTabAssenze.classList.remove('hidden');
     } else {
-      tabAdminContainer.classList.add('hidden');
+      btnTabAssenze.classList.add('hidden');
     }
   }
+}
+
+// Gestione dei tab all'interno della pagina Giocatori / Assenze
+function switchTabGiocatori(tab) {
+  if (tab === 'assenze' && typeof isAdmin !== 'undefined' && !isAdmin) {
+    tab = 'info';
+  }
+
+  const btnInfo = document.getElementById('btn-tab-giocatori-info');
+  const btnAssenze = document.getElementById('btn-tab-giocatori-assenze');
+  const viewInfo = document.getElementById('tab-giocatori-info-view');
+  const viewAssenze = document.getElementById('tab-giocatori-assenze-view');
+
+  if (tab === 'info') {
+    if (viewInfo) viewInfo.classList.remove('hidden');
+    if (viewAssenze) viewAssenze.classList.add('hidden');
+    if (btnInfo) btnInfo.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
+    if (btnAssenze) btnAssenze.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    caricaTabellaGiocatoriInfo();
+  } else {
+    if (viewInfo) viewInfo.classList.add('hidden');
+    if (viewAssenze) viewAssenze.classList.remove('hidden');
+    if (btnAssenze) btnAssenze.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
+    if (btnInfo) btnInfo.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    caricaPartiteAssenzeSupabase();
+  }
+}
+
+// Rinomina la funzione di caricamento tabella rimuovendo i riferimenti alla modale
+async function caricaTabellaGiocatoriInfo() {
+  const tbody = document.getElementById('admin-giocatori-tbody');
+  if (!tbody) return;
 
   tbody.innerHTML = `<tr><td colspan="7" class="text-center text-xs text-slate-400 py-6">Caricamento statistiche...</td></tr>`;
-  modal.classList.remove('hidden');
 
   try {
     const adesso = new Date();
@@ -197,32 +227,6 @@ async function apriPaginaAdminGiocatori() {
   } catch (err) {
     console.error("Errore caricamento tabella giocatori:", err);
     tbody.innerHTML = `<tr><td colspan="7" class="text-center text-xs text-rose-500 py-4">Errore caricamento dati.</td></tr>`;
-  }
-}
-
-
-// Variabile di supporto per la partita selezionata nelle assenze
-let partitaSelezionataAssenze = null;
-
-// Gestione dei tab all'interno della modale Info Giocatori / Assenze
-function switchTabGiocatoriAdmin(tab) {
-  const btnInfo = document.getElementById('btn-tab-giocatori-info');
-  const btnAssenze = document.getElementById('btn-tab-giocatori-assenze');
-  const viewInfo = document.getElementById('tab-giocatori-info-view');
-  const viewAssenze = document.getElementById('tab-giocatori-assenze-view');
-
-  if (tab === 'info') {
-    if (viewInfo) viewInfo.classList.remove('hidden');
-    if (viewAssenze) viewAssenze.classList.add('hidden');
-    if (btnInfo) btnInfo.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
-    if (btnAssenze) btnAssenze.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
-    apriPaginaAdminGiocatori();
-  } else {
-    if (viewInfo) viewInfo.classList.add('hidden');
-    if (viewAssenze) viewAssenze.classList.remove('hidden');
-    if (btnAssenze) btnAssenze.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
-    if (btnInfo) btnInfo.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
-    caricaPartiteAssenzeSupabase();
   }
 }
 
