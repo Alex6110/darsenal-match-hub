@@ -160,20 +160,50 @@ async function caricaPartiteCassaSupabase() {
   }).join('');
 }
 
-// MODIFICA PUNTO 3: Funzione di protezione prima dell'apertura
+// Funzione di conferma personalizzata robusta collegata alla modale HTML
+function mostraConfirm(titolo, messaggio, onConfirm) {
+  const modal = document.getElementById('modal-custom-confirm');
+  const titleEl = document.getElementById('modal-confirm-title');
+  const msgEl = document.getElementById('modal-confirm-msg');
+  const btnOk = document.getElementById('modal-confirm-btn-ok');
+  const btnCancel = document.getElementById('modal-confirm-btn-cancel');
+
+  if (titleEl) titleEl.innerText = titolo;
+  if (msgEl) msgEl.innerText = messaggio;
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  if (btnOk) {
+    btnOk.onclick = function() {
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      if (typeof onConfirm === 'function') onConfirm();
+    };
+  }
+
+  if (btnCancel) {
+    btnCancel.onclick = function() {
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    };
+  }
+}
+
 function confermaEDettaglioPartita(partitaId, giaSalvata) {
   if (giaSalvata) {
-    if (typeof mostraConfirm === 'function') {
-      mostraConfirm(
-        "Partita già registrata", 
-        "Sei sicuro di voler accedere per visualizzare o modificare l'incasso di questa partita?", 
-        function() {
-          apriDettaglioSpogliatoioPartita(partitaId);
-        }
-      );
-    } else if (confirm("Sei sicuro di voler accedere per visualizzare o modificare l'incasso di questa partita?")) {
-      apriDettaglioSpogliatoioPartita(partitaId);
-    }
+    mostraConfirm(
+      "Partita già registrata", 
+      "Sei sicuro di voler accedere per visualizzare o modificare l'incasso di questa partita?", 
+      function() {
+        apriDettaglioSpogliatoioPartita(partitaId);
+      }
+    );
   } else {
     apriDettaglioSpogliatoioPartita(partitaId);
   }
