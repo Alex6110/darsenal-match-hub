@@ -167,9 +167,15 @@ async function caricaTabellaGiocatoriInfo() {
       }
     });
 
-    tbody.innerHTML = giocatori.map(g => {
-      const nome = g.nome_completo || g.nome;
-      const nomeNorm = nome.toLowerCase().trim();
+    tbody.innerHTML = giocatori.map((g, idx) => {
+      const nomeCompleto = g.nome_completo || g.nome;
+      const partiNome = nomeCompleto.trim().split(/\s+/);
+      const cognome = partiNome[partiNome.length - 1];
+      const nomeProprio = partiNome.slice(0, partiNome.length - 1).join(' ');
+      const nomeNorm = nomeCompleto.toLowerCase().trim();
+
+      // Alternanza colori righe tabella (pari bianco, dispari grigio chiaro)
+      const bgRowClass = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/80';
 
       const pList = (presenze || []).filter(p => {
         const matchId = String(p.id_partita || p.id_sondaggio || p.partita_id);
@@ -212,14 +218,17 @@ async function caricaTabellaGiocatoriInfo() {
       const rossi = eList.filter(e => e.tipo === 'rosso').length;
 
       return `
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="p-3 font-bold text-slate-800 capitalize">${nome}</td>
-          <td class="p-3 text-center font-bold text-slate-700">${presenzeFormatte}</td>
-          <td class="p-3 text-center text-slate-500 font-bold">${esclusioni} / ${assenzeTotali}</td>
-          <td class="p-3 text-center text-slate-500">${ultima}</td>
-          <td class="p-3 text-center font-black text-burgundy">${gol}</td>
-          <td class="p-3 text-center font-bold text-amber-500">${gialli}</td>
-          <td class="p-3 text-center font-bold text-rose-600">${rossi}</td>
+        <tr class="${bgRowClass} hover:bg-slate-100/80 transition-colors">
+          <td class="p-2.5 pl-3">
+            <span class="font-black text-slate-900 block leading-tight uppercase">${cognome}</span>
+            <span class="text-[11px] text-slate-500 font-semibold block leading-tight">${nomeProprio}</span>
+          </td>
+          <td class="p-2 text-center font-bold text-slate-700">${presenzeFormatte}</td>
+          <td class="p-2 text-center text-slate-500 font-semibold">${esclusioni} / ${assenzeTotali}</td>
+          <td class="p-2 text-center text-slate-500 text-[11px]">${ultima}</td>
+          <td class="p-2 text-center font-black text-burgundy">${gol}</td>
+          <td class="p-2 text-center font-bold text-amber-500">${gialli}</td>
+          <td class="p-2 text-center font-bold text-rose-600">${rossi}</td>
         </tr>
       `;
     }).join('');
@@ -230,9 +239,9 @@ async function caricaTabellaGiocatoriInfo() {
   }
 }
 
-// Carica l'elenco delle partite con lo stesso stile della sezione Cassa/Saldo
+// Aggiornamento container partite assenze per puntare a 'lista-partite-assenze'
 async function caricaPartiteAssenzeSupabase() {
-  const container = document.getElementById('vista-elenco-partite-assenze');
+  const container = document.getElementById('lista-partite-assenze');
   if (!container) return;
 
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;

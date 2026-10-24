@@ -63,12 +63,12 @@ async function switchTab(tabName) {
   // SALVA LA TAB ATTIVA IN LOCALSTORAGE
   localStorage.setItem('darsenal_active_tab', tabName);
 
-  ['partite', 'classifica', 'sondaggi', 'saldo', 'messaggi', 'formazione'].forEach(t => {
+  ['partite', 'classifica', 'sondaggi', 'saldo', 'messaggi', 'formazione', 'giocatori'].forEach(t => {
     const el = document.getElementById(`view-${t}`);
     if (el) el.classList.add('hidden');
   });
 
-  ['partite', 'classifica', 'sondaggi', 'saldo'].forEach(t => {
+  ['partite', 'classifica', 'sondaggi', 'saldo', 'giocatori'].forEach(t => {
     const navBtn = document.getElementById(`nav-${t}`);
     if (navBtn) {
       navBtn.classList.remove('text-burgundy');
@@ -1128,12 +1128,12 @@ async function switchTab(tabName) {
 
   localStorage.setItem('darsenal_active_tab', tabName);
 
-  ['partite', 'classifica', 'sondaggi', 'saldo', 'messaggi', 'formazione'].forEach(t => {
+  ['partite', 'classifica', 'sondaggi', 'saldo', 'messaggi', 'formazione', 'giocatori'].forEach(t => {
     const el = document.getElementById(`view-${t}`);
     if (el) el.classList.add('hidden');
   });
 
-  ['partite', 'classifica', 'sondaggi'].forEach(t => {
+  ['partite', 'classifica', 'sondaggi', 'giocatori', 'formazione', 'messaggi', 'saldo'].forEach(t => {
     const navBtn = document.getElementById(`nav-${t}`);
     if (navBtn) {
       navBtn.classList.remove('text-burgundy');
