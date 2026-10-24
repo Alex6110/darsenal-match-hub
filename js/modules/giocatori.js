@@ -224,7 +224,7 @@ async function caricaTabellaGiocatoriInfo() {
             <span class="font-bold text-slate-600 text-xs block leading-tight">${nomeProprio}</span>
           </td>
           <td class="p-2 text-center font-bold text-slate-700 w-[10%]">${presenzeFormatte}</td>
-          <td class="p-2 text-center text-slate-500 font-semibold w-[11%]">${esclusioni} / ${assenzeTotali}</td>
+          <td class="p-2 text-center text-slate-500 font-semibold w-[11%] whitespace-nowrap">${esclusioni} / ${assenzeTotali}</td>
           <td class="p-2 text-center text-slate-500 text-[11px] w-[19%]">${ultima}</td>
           <td class="p-2 text-center font-black text-burgundy w-[8%]">${gol}</td>
           <td class="p-2 text-center font-bold text-amber-500 w-[8%]">${gialli}</td>
