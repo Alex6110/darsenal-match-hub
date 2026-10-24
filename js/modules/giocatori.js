@@ -1,4 +1,4 @@
-// js/modules/giocatori.js
+let partitaSelezionataAssenze = null;
 
 // Carica e calcola le statistiche personali per il menu laterale dell'utente
 async function caricaStatisticheUtente(nomeUtente) {
