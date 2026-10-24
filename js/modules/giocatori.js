@@ -212,16 +212,16 @@ function switchTabGiocatoriAdmin(tab) {
   const viewAssenze = document.getElementById('tab-giocatori-assenze-view');
 
   if (tab === 'info') {
-    viewInfo?.classList.remove('hidden');
-    viewAssenze?.classList.add('hidden');
-    btnInfo?.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
-    btnAssenze?.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
-    apriPaginaAdminGiocatori(); // ricarica tabella info
+    if (viewInfo) viewInfo.classList.remove('hidden');
+    if (viewAssenze) viewAssenze.classList.add('hidden');
+    if (btnInfo) btnInfo.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
+    if (btnAssenze) btnAssenze.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    apriPaginaAdminGiocatori();
   } else {
-    viewInfo?.classList.add('hidden');
-    viewAssenze?.classList.remove('hidden');
-    btnAssenze?.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
-    btnInfo?.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    if (viewInfo) viewInfo.classList.add('hidden');
+    if (viewAssenze) viewAssenze.classList.remove('hidden');
+    if (btnAssenze) btnAssenze.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
+    if (btnInfo) btnInfo.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
     caricaPartiteAssenzeSupabase();
   }
 }
