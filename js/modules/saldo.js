@@ -210,12 +210,16 @@ function confermaEDettaglioPartita(partitaId, giaSalvata) {
 }
 
 
+// Variabile globale temporanea per tracciare lo stato iniziale dei dati nel modulo
+let statoInizialeForm = {};
+
 async function apriDettaglioSpogliatoioPartita(partitaId) {
-  let { data: partita } = await db.from('partite').select('*').eq('id', partitaId).single();
+  // CORREZIONE ERRORE 406: Usiamo .maybeSingle() al posto di .single()
+  let { data: partita } = await db.from('partite').select('*').eq('id', partitaId).maybeSingle();
   let actualPartitaId = partitaId;
 
   if (!partita) {
-    const { data: cal } = await db.from('calendario_torneo').select('*').eq('id', partitaId).single();
+    const { data: cal } = await db.from('calendario_torneo').select('*').eq('id', partitaId).maybeSingle();
     if (cal) {
       const avversario = cal.squadra_casa.toLowerCase().includes('darsenal') ? cal.squadra_trasferta : cal.squadra_casa;
       
@@ -270,7 +274,6 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
     presentiList = [];
   }
 
-  // MODIFICA PUNTO 3: Logica Arrotondamento dall'HTML di prova
   const numPresenti = presentiList.length;
   const costoCampo = 50;
   const quotaEsatta = numPresenti > 0 ? costoCampo / numPresenti : 0;
@@ -287,7 +290,7 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
     return;
   }
 
-  // MODIFICA PUNTO 1: Carichiamo i movimenti salvati in precedenza per pre-compilare gli input
+  // Carichiamo i movimenti salvati in precedenza per pre-compilare gli input
   const { data: movimentiEsistenti } = await db.from('movimenti_cassa')
     .select('*')
     .ilike('causale', `%Partita vs ${partita.squadra_avversaria}%`);
@@ -299,11 +302,12 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
     });
   }
 
+  statoInizialeForm = {}; // Reset dello stato iniziale
+
   container.innerHTML = presentiList.map((nomeGiocatore, idx) => {
     const key = nomeGiocatore.toLowerCase().trim();
     const mov = movimentiMap[key];
     
-    // Se la partita era già salvata, calcoliamo a ritroso il dato versato rispetto alla quota
     let valDati = '';
     let valResto = '';
 
@@ -315,6 +319,9 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
       }
     }
 
+    // Memorizziamo il valore iniziale caricato
+    statoInizialeForm[idx] = { dati: valDati, resto: valResto };
+
     return `
       <div class="p-2.5 grid grid-cols-12 items-center text-xs gap-1" data-giocatore="${escapeHtmlAttr(nomeGiocatore)}">
         <span class="col-span-4 font-bold text-slate-700 truncate">${nomeGiocatore}</span>
@@ -325,7 +332,6 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
     `;
   }).join('');
 
-  // Eseguiamo il calcolo iniziale per aggiornare le etichette dei saldi
   presentiList.forEach((_, idx) => {
     calcolaRestoRow(idx, quotaArrotondata);
   });
@@ -359,14 +365,34 @@ function calcolaRestoRow(idx, quota) {
 async function salvaIncassoPartita() {
   if (!partitaSelezionataCassa) return;
 
+  const rows = document.querySelectorAll('#spog-lista-giocatori > div');
+  
+  // CONTROLLO MODIFICHE: Verifica se l'utente ha modificato i dati rispetto all'apertura
+  let modificato = false;
+  rows.forEach((row, idx) => {
+    const datiInput = document.getElementById(`input-dati-${idx}`);
+    const restoInput = document.getElementById(`input-resto-${idx}`);
+    const valDatiActual = datiInput ? datiInput.value : '';
+    const valRestoActual = restoInput ? restoInput.value : '';
+
+    const init = statoInizialeForm[idx] || { dati: '', resto: '' };
+    if (valDatiActual !== init.dati || valRestoActual !== init.resto) {
+      modificato = true;
+    }
+  });
+
+  if (!modificato) {
+    mostraAlert("Nessuna modifica rilevata rispetto ai dati già registrati.");
+    chiudiDettaglioPartita();
+    return;
+  }
+
   const causalePartita = `Partita vs ${partitaSelezionataCassa.squadra_avversaria}`;
 
-  // Eliminiamo i vecchi movimenti di questa partita per sovrascrivere pulito
+  // Eliminiamo i vecchi movimenti di questa partita per sovrascrivere
   await db.from('movimenti_cassa').delete().ilike('causale', `%${causalePartita}%`);
 
-  const rows = document.querySelectorAll('#spog-lista-giocatori > div');
   const movimentiDaInserire = [];
-
   const quota = parseFloat(document.getElementById('spog-quota-testa').innerText) || 0;
 
   rows.forEach((row, idx) => {
@@ -380,7 +406,6 @@ async function salvaIncassoPartita() {
     const importoVersatoNetto = (dati - resto);
     const movimentoNetto = importoVersatoNetto - quota;
 
-    // Registra il movimento per ogni giocatore presente (se non ha pagato, importo sarà -quota)
     if (nome) {
       movimentiDaInserire.push({
         nome_giocatore: nome,
@@ -389,9 +414,6 @@ async function salvaIncassoPartita() {
       });
     }
   });
-
-  // NOTA: Rimossa la generazione automatica di "Cassa Squadra" / "Arrotondamento" 
-  // affinché tutti i resti e le eccedenze finiscano esclusivamente nei saldi individuali dei giocatori.
 
   if (movimentiDaInserire.length > 0) {
     const { error } = await db.from('movimenti_cassa').insert(movimentiDaInserire);
