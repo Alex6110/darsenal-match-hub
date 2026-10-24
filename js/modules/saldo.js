@@ -367,7 +367,6 @@ async function salvaIncassoPartita() {
   const rows = document.querySelectorAll('#spog-lista-giocatori > div');
   const movimentiDaInserire = [];
 
-  const numPresenti = rows.length;
   const quota = parseFloat(document.getElementById('spog-quota-testa').innerText) || 0;
 
   rows.forEach((row, idx) => {
@@ -381,7 +380,7 @@ async function salvaIncassoPartita() {
     const importoVersatoNetto = (dati - resto);
     const movimentoNetto = importoVersatoNetto - quota;
 
-    // Registra sempre il movimento per ogni giocatore presente (se ha pagato 0, il movimento sarà -quota)
+    // Registra il movimento per ogni giocatore presente (se non ha pagato, importo sarà -quota)
     if (nome) {
       movimentiDaInserire.push({
         nome_giocatore: nome,
@@ -391,19 +390,8 @@ async function salvaIncassoPartita() {
     }
   });
 
-  // Calcolo e inserimento dell'arrotondamento spettante alla Cassa Squadra
-  const costoCampo = 50;
-  const quotaEsatta = numPresenti > 0 ? costoCampo / numPresenti : 0;
-  const quotaArrotondata = Math.ceil(quotaEsatta * 10) / 10;
-  const cassaGenerata = numPresenti > 0 ? (quotaArrotondata * numPresenti) - costoCampo : 0;
-
-  if (cassaGenerata > 0) {
-    movimentiDaInserire.push({
-      nome_giocatore: 'Cassa Squadra',
-      importo: cassaGenerata,
-      causale: `Arrotondamento ${causalePartita}`
-    });
-  }
+  // NOTA: Rimossa la generazione automatica di "Cassa Squadra" / "Arrotondamento" 
+  // affinché tutti i resti e le eccedenze finiscano esclusivamente nei saldi individuali dei giocatori.
 
   if (movimentiDaInserire.length > 0) {
     const { error } = await db.from('movimenti_cassa').insert(movimentiDaInserire);
