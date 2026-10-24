@@ -75,6 +75,18 @@ async function caricaDatiCassaSupabase() {
     displaySaldoTotale.innerText = `${totaleCassa.toFixed(2)} €`;
   }
 
+  // Calcola la somma di tutti i saldi individuali dei giocatori
+  let totaleGiocatori = 0;
+  Object.values(saldiMap).forEach(s => {
+    totaleGiocatori += s;
+  });
+
+  const displaySaldoGiocatoriTotale = document.getElementById('display-saldo-giocatori-totale');
+  if (displaySaldoGiocatoriTotale) {
+    const formattedTotaleG = totaleGiocatori >= 0 ? `+${totaleGiocatori.toFixed(2)} €` : `${totaleGiocatori.toFixed(2)} €`;
+    displaySaldoGiocatoriTotale.innerText = formattedTotaleG;
+  }
+
   container.innerHTML = giocatori.map(g => {
     const nome = g.nome_completo || g.nome;
     const saldo = saldiMap[nome.toLowerCase().trim()] || 0;

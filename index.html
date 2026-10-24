@@ -563,11 +563,18 @@
 
       <!-- VISTA 1: TAB SQUADRA -->
       <div id="tab-squadra-view" class="space-y-4">
-        <!-- BOX SALDO SQUADRA -->
-        <div class="bg-gradient-to-br from-burgundy to-burgundy-dark text-white p-5 rounded-3xl shadow-lg text-center space-y-1">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-burgundy-light/80">Saldo Totale Cassa Squadra</p>
-          <p id="display-saldo-squadra" class="text-3xl font-black">0.00 €</p>
-          <p class="text-[10px] opacity-80">Derivante da arrotondamenti e versamenti</p>
+        <!-- BOX SALDO SQUADRA E GIOCATORI -->
+        <div class="bg-gradient-to-br from-burgundy to-burgundy-dark text-white p-5 rounded-3xl shadow-lg grid grid-cols-2 divide-x divide-white/20 text-center">
+          <div class="space-y-1 pr-2">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-white">Cassa Squadra</p>
+            <p id="display-saldo-squadra" class="text-2xl font-black">0.00 €</p>
+            <p class="text-[9px] opacity-80">Arrotondamenti</p>
+          </div>
+          <div class="space-y-1 pl-2">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-white">Saldo Giocatori</p>
+            <p id="display-saldo-giocatori-totale" class="text-2xl font-black">0.00 €</p>
+            <p class="text-[9px] opacity-80">Totale debiti/crediti</p>
+          </div>
         </div>
 
         <!-- TABELLA SALDO GIOCATORI -->
