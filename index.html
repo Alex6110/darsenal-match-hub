@@ -1008,6 +1008,14 @@
             <td id="stat-ultima" class="py-3 text-right font-black text-slate-800">-</td>
           </tr>
           <tr>
+            <td class="py-3 text-slate-500 font-bold uppercase tracking-wider text-[10px]">Assenze</td>
+            <td id="stat-assenze" class="py-3 text-right font-black text-slate-800">0</td>
+          </tr>
+          <tr>
+            <td class="py-3 text-slate-500 font-bold uppercase tracking-wider text-[10px]">Esclusioni</td>
+            <td id="stat-esclusioni" class="py-3 text-right font-black text-slate-800">0</td>
+          </tr>
+          <tr>
             <td class="py-3 text-slate-500 font-bold uppercase tracking-wider text-[10px]">Gol</td>
             <td id="stat-gol" class="py-3 text-right font-black text-burgundy text-lg">0</td>
           </tr>
@@ -1051,26 +1059,37 @@
     </div>
   </aside>
 
-  <!-- MODALE ADMIN GIOCATORI -->
-  <div id="admin-giocatori-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-    <div class="bg-white p-5 rounded-3xl w-full max-w-xl shadow-2xl border border-slate-100 relative space-y-4 max-h-[85vh] flex flex-col">
+  <!-- MODALE INFO GIOCATORI E GESTIONE ASSENZE -->
+  <div id="admin-giocatori-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 z-50">
+    <div class="bg-white p-5 rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-100 relative space-y-4 max-h-[90vh] flex flex-col">
       
       <!-- Intestazione -->
-      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
         <div>
           <h3 class="font-black text-slate-900 text-base">Info Tutti i Giocatori</h3>
-          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Riepilogo statistiche di squadra</p>
+          <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Statistiche e Gestione Assenze</p>
         </div>
         <button onclick="document.getElementById('admin-giocatori-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 font-bold text-lg w-7 h-7 flex items-center justify-center rounded-full bg-slate-100">✕</button>
       </div>
 
-      <!-- Tabella Statistiche -->
-      <div class="overflow-x-auto overflow-y-auto flex-1 rounded-2xl border border-slate-100">
-        <table class="w-full text-left text-xs">
+      <!-- SELETTORE A SCHEDA: INFO / ASSENZE (Visibile all'admin, o solo tabella per utenti base) -->
+      <div id="container-tab-giocatori-admin" class="hidden flex bg-slate-200 p-1 rounded-xl text-xs font-black shrink-0">
+        <button id="btn-tab-giocatori-info" onclick="switchTabGiocatoriAdmin('info')" class="flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all">
+          Info Giocatori
+        </button>
+        <button id="btn-tab-giocatori-assenze" onclick="switchTabGiocatoriAdmin('assenze')" class="flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all">
+          Gestione Assenze
+        </button>
+      </div>
+
+      <!-- VISTA TAB INFO (Tabella Giocatori) -->
+      <div id="tab-giocatori-info-view" class="overflow-x-auto overflow-y-auto flex-1 rounded-2xl border border-slate-100">
+        <table class="w-full text-left text-xs min-w-[550px]">
           <thead class="bg-slate-50 sticky top-0 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
             <tr>
               <th class="p-3">Giocatore</th>
               <th class="p-3 text-center" title="Presenze Totali">Pres</th>
+              <th class="p-3 text-center" title="Esclusioni / Assenze">Esc / Ass</th>
               <th class="p-3 text-center" title="Ultima Partita">Ultima</th>
               <th class="p-3 text-center font-black text-burgundy" title="Gol Segnati">Gol</th>
               <th class="p-3 text-center text-amber-500" title="Cartellini Gialli">🟨</th>
@@ -1079,10 +1098,40 @@
           </thead>
           <tbody id="admin-giocatori-tbody" class="divide-y divide-slate-100 font-medium text-slate-700">
             <tr>
-              <td colspan="6" class="text-center text-xs text-slate-400 py-6">Caricamento statistiche...</td>
+              <td colspan="7" class="text-center text-xs text-slate-400 py-6">Caricamento statistiche...</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- VISTA TAB ASSENZE (Gestione Partite e Selettori Non Disponibile / Escluso) -->
+      <div id="tab-giocatori-assenze-view" class="hidden space-y-3 overflow-y-auto flex-1 pr-1">
+        <!-- Elenco Partite (Stile Cassa) -->
+        <div id="vista-elenco-partite-assenze" class="space-y-2.5">
+          <!-- Popolato via JS -->
+        </div>
+
+        <!-- Dettaglio Partita Selezionata (Lista Assenti con Selettore) -->
+        <div id="vista-dettaglio-partita-assenze" class="hidden space-y-4">
+          <button onclick="chiudiDettaglioPartitaAssenze()" class="text-xs font-bold text-burgundy flex items-center gap-1 hover:underline">
+            &larr; Torna all'elenco partite
+          </button>
+          <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm">
+            <h4 id="assenze-titolo-partita" class="font-black text-sm text-slate-800">Partita</h4>
+            <p id="assenze-data-partita" class="text-[10px] font-bold text-slate-400">Data</p>
+          </div>
+          <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-3 bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+              Giocatori Non Presenti
+            </div>
+            <div id="assenze-lista-giocatori" class="divide-y divide-slate-100 max-h-[45vh] overflow-y-auto">
+              <!-- Popolato via JS -->
+            </div>
+          </div>
+          <button onclick="salvaAssenzePartita()" class="w-full py-3.5 bg-burgundy text-white font-black text-xs rounded-2xl shadow-lg hover:bg-burgundy-dark transition">
+            Salva Assenze / Esclusioni
+          </button>
+        </div>
       </div>
 
     </div>
@@ -1364,6 +1413,7 @@
   <script src="js/state.js"></script>
 
   <script src="js/modules/ui.js"></script>
+  <script src="js/modules/giocatori.js"></script>
   <script src="js/modules/auth.js"></script>
   <script src="js/modules/partite.js"></script>
   <script src="js/modules/classifica.js"></script>
