@@ -70,22 +70,22 @@ async function confermaLogin() {
 }
 
 // Funzione Logout aggiornata con Modale Custom
-async function logout() {
-  const confermato = await mostraConfirm("Vuoi davvero uscire dal tuo account?", "Logout");
-  if (!confermato) return;
-  
-  localStorage.removeItem('darsenal_user');
-  localStorage.removeItem('darsenal_is_admin');
-  
-  currentUser = null;
-  isAdmin = false;
+function logout() {
+  mostraConfirm("Logout", "Vuoi davvero uscire dal tuo account?", function() {
+    // Questo codice viene eseguito solo quando l'utente clicca "Conferma" nella modale
+    localStorage.removeItem('darsenal_user');
+    localStorage.removeItem('darsenal_is_admin');
+    
+    currentUser = null;
+    isAdmin = false;
 
-  if (typeof chiudiMenuUtente === 'function') {
-    chiudiMenuUtente();
-  }
+    if (typeof chiudiMenuUtente === 'function') {
+      chiudiMenuUtente();
+    }
 
-  applicaStatoUtente();
-  document.getElementById('login-modal')?.classList.remove('hidden');
+    applicaStatoUtente();
+    document.getElementById('login-modal')?.classList.remove('hidden');
+  });
 }
 
 // Applica le visibilità e i dati utente
@@ -116,10 +116,12 @@ function applicaStatoUtente() {
     document.getElementById('admin-partita-btn-container')?.classList.remove('hidden');
     document.getElementById('admin-classifica-btn')?.classList.remove('hidden');
     document.getElementById('admin-msg-btn')?.classList.remove('hidden');
+    document.getElementById('btn-tab-giocatore')?.classList.remove('hidden');
   } else {
     document.getElementById('admin-partita-btn-container')?.classList.add('hidden');
     document.getElementById('admin-classifica-btn')?.classList.add('hidden');
     document.getElementById('admin-msg-btn')?.classList.add('hidden');
+    document.getElementById('btn-tab-giocatore')?.classList.add('hidden');
   }
 
   // "Info Tutti i Giocatori" visibile a TUTTI gli utenti
