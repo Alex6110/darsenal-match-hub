@@ -111,6 +111,16 @@ function renderPartite() {
          </div>` 
       : '';
 
+    // Pulsante Formazione visibile a tutti nel Prossimo Incontro
+    const btnFormazioneHtml = `
+      <div class="mt-3 pt-3 border-t border-slate-100">
+        <button onclick="apriSezioneFormazione()" class="w-full py-2.5 bg-slate-100 text-slate-700 font-black text-[11px] uppercase tracking-widest rounded-xl hover:bg-slate-200 transition-colors flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4 text-burgundy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-8v16m-7-13h14a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2z"/></svg>
+          Vedi Formazione Tattica
+        </button>
+      </div>
+    `;
+
     const adminDeleteBtn = (typeof isAdmin !== 'undefined' && isAdmin) ? `
       <button onclick="eliminaPartitaTorneo('${p.id}')" class="text-slate-300 hover:text-rose-600 transition-colors p-1" title="Elimina Partita">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -149,8 +159,9 @@ function renderPartite() {
           </div>
         </div>
 
-        <!-- FOOTER PULSANTE ADMIN -->
+        <!-- FOOTER PULSANTI -->
         ${btnRisultatoHtml}
+        ${btnFormazioneHtml}
       </div>
     `;
   } else {
