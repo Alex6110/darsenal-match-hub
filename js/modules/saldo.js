@@ -164,16 +164,21 @@ async function caricaPartiteCassaSupabase() {
 function confermaEDettaglioPartita(partitaId, giaSalvata) {
   if (giaSalvata) {
     if (typeof mostraConfirm === 'function') {
-      mostraConfirm("Sei sicuro di voler accedere per visualizzare o modificare una partita con incasso già salvato?", () => {
-        apriDettaglioSpogliatoioPartita(partitaId);
-      });
-    } else if (confirm("Sei sicuro di voler accedere per visualizzare o modificare una partita con incasso già salvato?")) {
+      mostraConfirm(
+        "Partita già registrata", 
+        "Sei sicuro di voler accedere per visualizzare o modificare l'incasso di questa partita?", 
+        function() {
+          apriDettaglioSpogliatoioPartita(partitaId);
+        }
+      );
+    } else if (confirm("Sei sicuro di voler accedere per visualizzare o modificare l'incasso di questa partita?")) {
       apriDettaglioSpogliatoioPartita(partitaId);
     }
   } else {
     apriDettaglioSpogliatoioPartita(partitaId);
   }
 }
+
 
 async function apriDettaglioSpogliatoioPartita(partitaId) {
   let { data: partita } = await db.from('partite').select('*').eq('id', partitaId).single();
@@ -320,6 +325,7 @@ function calcolaRestoRow(idx, quota) {
   }
 }
 
+// CORREZIONE REGISTRAZIONE DEBITI: Registra tutti i presenti, sia chi paga sia chi deve ancora pagare
 async function salvaIncassoPartita() {
   if (!partitaSelezionataCassa) return;
 
@@ -331,18 +337,22 @@ async function salvaIncassoPartita() {
   const rows = document.querySelectorAll('#spog-lista-giocatori > div');
   const movimentiDaInserire = [];
 
-  let numPresenti = 0;
+  const numPresenti = rows.length;
+  const quota = parseFloat(document.getElementById('spog-quota-testa').innerText) || 0;
+
   rows.forEach((row, idx) => {
     const nome = row.getAttribute('data-giocatore');
-    const dati = parseFloat(document.getElementById(`input-dati-${idx}`).value) || 0;
-    const resto = parseFloat(document.getElementById(`input-resto-${idx}`).value) || 0;
-    const quota = parseFloat(document.getElementById('spog-quota-testa').innerText) || 0;
+    const datiInput = document.getElementById(`input-dati-${idx}`);
+    const restoInput = document.getElementById(`input-resto-${idx}`);
+
+    const dati = parseFloat(datiInput ? datiInput.value : 0) || 0;
+    const resto = parseFloat(restoInput ? restoInput.value : 0) || 0;
 
     const importoVersatoNetto = (dati - resto);
     const movimentoNetto = importoVersatoNetto - quota;
 
-    if (dati > 0 || resto > 0 || importoVersatoNetto > 0) {
-      numPresenti++;
+    // Registra sempre il movimento per ogni giocatore presente (se ha pagato 0, il movimento sarà -quota)
+    if (nome) {
       movimentiDaInserire.push({
         nome_giocatore: nome,
         importo: movimentoNetto,
@@ -351,7 +361,7 @@ async function salvaIncassoPartita() {
     }
   });
 
-  // Calcolo e inserimento specifico dell'arrotondamento per la cassa squadra
+  // Calcolo e inserimento dell'arrotondamento spettante alla Cassa Squadra
   const costoCampo = 50;
   const quotaEsatta = numPresenti > 0 ? costoCampo / numPresenti : 0;
   const quotaArrotondata = Math.ceil(quotaEsatta * 10) / 10;
