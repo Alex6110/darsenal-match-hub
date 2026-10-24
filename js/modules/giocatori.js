@@ -219,16 +219,16 @@ async function caricaTabellaGiocatoriInfo() {
 
       return `
         <tr class="${bgRowClass} hover:bg-slate-100/80 transition-colors">
-          <td class="p-2.5 pl-3 w-[38%] truncate">
-            <span class="font-bold text-slate-800 text-xs block leading-tight truncate">${cognome}</span>
-            <span class="font-bold text-slate-600 text-xs block leading-tight truncate">${nomeProprio}</span>
+          <td class="p-2.5 pl-3 w-[36%]">
+            <span class="font-bold text-slate-800 text-xs block leading-tight">${cognome}</span>
+            <span class="font-bold text-slate-600 text-xs block leading-tight">${nomeProprio}</span>
           </td>
           <td class="p-2 text-center font-bold text-slate-700 w-[10%]">${presenzeFormatte}</td>
-          <td class="p-2 text-center text-slate-500 font-semibold w-[10%]">${esclusioni} / ${assenzeTotali}</td>
-          <td class="p-2 text-center text-slate-500 text-[11px] w-[22%]">${ultima}</td>
-          <td class="p-2 text-center font-black text-burgundy w-[7%]">${gol}</td>
-          <td class="p-2 text-center font-bold text-amber-500 w-[6%]">${gialli}</td>
-          <td class="p-2 text-center font-bold text-rose-600 w-[7%]">${rossi}</td>
+          <td class="p-2 text-center text-slate-500 font-semibold w-[11%]">${esclusioni} / ${assenzeTotali}</td>
+          <td class="p-2 text-center text-slate-500 text-[11px] w-[19%]">${ultima}</td>
+          <td class="p-2 text-center font-black text-burgundy w-[8%]">${gol}</td>
+          <td class="p-2 text-center font-bold text-amber-500 w-[8%]">${gialli}</td>
+          <td class="p-2 text-center font-bold text-rose-600 w-[8%]">${rossi}</td>
         </tr>
       `;
     }).join('');
