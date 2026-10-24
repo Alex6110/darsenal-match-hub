@@ -172,7 +172,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // RIPRISTINA L'ULTIMA TAB ATTIVA AL RICARICAMENTO DELLA PAGINA
   const savedTab = localStorage.getItem('darsenal_active_tab') || 'partite';
   if (currentUser) {
-    if (typeof switchTab === 'function') switchTab(savedTab);
+    if (typeof switchTab === 'function') {
+      switchTab(savedTab);
+      caricaDatiPerTab(savedTab);
+    }
   } else {
     if (typeof switchTab === 'function') switchTab('partite');
   }

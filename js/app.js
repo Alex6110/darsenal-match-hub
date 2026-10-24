@@ -46,5 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
   } else if (typeof switchTab === 'function') {
     const savedTab = localStorage.getItem('darsenal_active_tab') || 'partite';
     switchTab(savedTab);
+    caricaDatiPerTab(savedTab);
   }
 });

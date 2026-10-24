@@ -478,7 +478,14 @@ async function salvaPartitaTorneo() {
 
   if (!casa || !trasferta || !data || !ora) return mostraAlert("Compila tutti i campi obbligatori!");
 
-  const dataOraISO = new Date(`${data}T${ora}`).toISOString();
+  let dataOraISO;
+  try {
+    const [gg, mm] = data.split('/');
+    const annoCorrente = new Date().getFullYear();
+    dataOraISO = new Date(`${annoCorrente}-${mm}-${gg}T${ora}:00`).toISOString();
+  } catch (e) {
+    dataOraISO = new Date(`${data}T${ora}`).toISOString();
+  }
 
   const { error } = await db.from('calendario_torneo').insert([{
     giornata, 

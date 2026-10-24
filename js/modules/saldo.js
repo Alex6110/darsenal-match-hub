@@ -290,7 +290,7 @@ async function apriDettaglioSpogliatoioPartita(partitaId) {
   document.getElementById('spog-titolo-partita').innerText = `Darsenal vs ${partita.squadra_avversaria}`;
   
   const dPartita = new Date(partita.data_ora);
-  const dataOraFormatted = !isNaN(dPartita) ? dPartita.toLocaleString('it-IT', { timeZone: 'UTC' }) : '';
+  const dataOraFormatted = !isNaN(dPartita) ? dPartita.toLocaleString('it-IT') : '';
   document.getElementById('spog-data-partita').innerText = dataOraFormatted;
 
   // Recupera i presenti effettivi dal sondaggio

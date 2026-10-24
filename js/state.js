@@ -93,3 +93,10 @@ function salvaNuovaFase() {
   cambiaFaseAttiva(nuovaFase.id);
   chiudiModalNuovaFase();
 }
+
+function caricaDatiPerTab(tab) {
+  if (tab === 'partite' && typeof caricaPartite === 'function') caricaPartite();
+  else if (tab === 'classifica' && typeof caricaClassifica === 'function') caricaClassifica();
+  else if (tab === 'sondaggi' && typeof caricaSondaggi === 'function') caricaSondaggi();
+  else if (tab === 'saldo' && typeof caricaDatiCassaSupabase === 'function') caricaDatiCassaSupabase();
+}
