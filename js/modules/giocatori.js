@@ -1,4 +1,14 @@
 let partitaSelezionataAssenze = null;
+let partiteAssenzeCache = [];
+let giocatoriAssentiCorrenti = [];
+const MS_ORA = 60 * 60 * 1000;
+const chiaveNome = (s) => String(s || '').toLowerCase().trim();
+
+function trovaSondaggioIdPerPartita(p, sondaggi) {
+  const t = new Date(p.data_ora).getTime();
+  const s = (sondaggi || []).find(x => new Date(x.data_ora).getTime() === t && x.tipo_sondaggio !== 'annullato');
+  return s ? String(s.id) : null;
+}
 
 // Carica e calcola le statistiche personali per il menu laterale dell'utente[cite: 98]
 async function caricaStatisticheUtente(nomeUtente) {
@@ -10,11 +20,12 @@ async function caricaStatisticheUtente(nomeUtente) {
     const adesso = new Date();
 
     // 1. Carica calendario, presenze, eventi e sondaggi (partite) per allineare gli ID[cite: 98]
-    const [{ data: calendario }, { data: presenze }, { data: eventi }, { data: tuttePartiteSondaggio }] = await Promise.all([
-      db.from('calendario_torneo').select('*').order('data_ora', { ascending: false }),
-      db.from('presenze').select('*'),
-      db.from('eventi_partita').select('*'),
-      db.from('partite').select('id, data_ora')
+   const [{ data: calendario }, { data: presenze }, { data: eventi }, { data: tuttePartiteSondaggio }, { data: assenzeSalvate }] = await Promise.all([
+    db.from('calendario_torneo').select('*').order('data_ora', { ascending: false }),
+    db.from('presenze').select('*'),
+    db.from('eventi_partita').select('*'),
+    db.from('partite').select('id, data_ora'),
+    db.from('assenze_partita').select('nome_utente, tipo')
     ]);
 
     // Filtra solo le partite del torneo GIÀ GIOCATE dalla squadra[cite: 98]
@@ -42,7 +53,9 @@ async function caricaStatisticheUtente(nomeUtente) {
 
     // Presenze effettive (nominatore) / Partite totali giocate dalla squadra (denominatore)[cite: 98]
     const presenzeTotali = presenzeGiocatore.filter(p => p.stato === 'Presente').length;
-    const esclusioniTotali = presenzeGiocatore.filter(p => p.stato === 'Escluso').length;           
+    const esclusioniTotali = (assenzeSalvate || []).filter(a =>
+        a.tipo === 'escluso' && chiaveNome(a.nome_utente) === nomeNorm
+    ).length;         
     const assenzeTotali = Math.max(0, numPartiteSquadra - presenzeTotali);
 
     // Ultima giocata[cite: 98]
@@ -127,6 +140,7 @@ function switchTabGiocatori(tab) {
     if (viewAssenze) viewAssenze.classList.remove('hidden');
     if (btnAssenze) btnAssenze.className = "flex-1 py-2 rounded-lg bg-white text-burgundy shadow-sm transition-all";
     if (btnInfo) btnInfo.className = "flex-1 py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all";
+    chiudiDettaglioPartitaAssenze();
     caricaPartiteAssenzeSupabase();
   }
 }
@@ -183,8 +197,9 @@ async function caricaTabellaGiocatoriInfo() {
 
       const pres = pList.filter(p => p.stato === 'Presente').length;
       const assenzeTotali = Math.max(0, numPartiteSquadra - pres);
-      const esclusioni = pList.filter(p => p.stato === 'Escluso').length;
-
+      const esclusioni = (assenzeSalvate || []).filter(a =>
+        a.tipo === 'escluso' && chiaveNome(a.nome_utente) === nomeNorm
+      ).length;
       const presenzeFormatte = `${pres} / ${numPartiteSquadra}`;
 
       const presEffettive = pList.filter(p => p.stato === 'Presente');
@@ -241,114 +256,87 @@ async function caricaTabellaGiocatoriInfo() {
 async function caricaPartiteAssenzeSupabase() {
   const container = document.getElementById('lista-partite-assenze');
   if (!container) return;
-
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
 
-  // MODIFICA QUI: Aggiunto il recupero di partite (sondaggi)
-  const [{ data: partite, error }, { data: tuttePresenze }, { data: tuttePartiteSondaggio }] = await Promise.all([
-    db.from('calendario_torneo').select('*').order('data_ora', { ascending: true }),
-    db.from('presenze').select('id_partita, stato'),
-    db.from('partite').select('id, data_ora, squadra_avversaria')
-  ]);
-
+  const { data: partite, error } = await db.from('calendario_torneo').select('*').order('data_ora', { ascending: true });
   if (error || !partite) {
     container.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Errore caricamento calendario.</div>`;
     return;
   }
 
-  const partiteDarsenal = partite.filter(p => {
-    const casa = (p.squadra_casa || '').toLowerCase();
-    const trasf = (p.squadra_trasferta || '').toLowerCase();
-    return casa.includes('darsenal') || trasf.includes('darsenal');
-  });
+  const partiteDarsenal = partite.filter(p =>
+    (p.squadra_casa || '').toLowerCase().includes('darsenal') ||
+    (p.squadra_trasferta || '').toLowerCase().includes('darsenal')
+  );
 
   if (partiteDarsenal.length === 0) {
     container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Nessuna partita trovata.</div>`;
     return;
   }
 
-  const idsPresenzeSalvate = new Set(
-    (tuttePresenze || [])
-      .filter(pr => pr.stato === 'Assente' || pr.stato === 'Escluso' || pr.stato === 'Verificato')
-      .map(pr => String(pr.id_partita))
-  );
-
   const adesso = new Date();
-  // Calcoliamo la soglia di 1 ora dopo l'inizio per la partita in corso/prossima
-  const sogliaUnOraFa = new Date(adesso.getTime() - 60 * 60 * 1000);
+  const soglia = new Date(adesso.getTime() - MS_ORA);
+  // "Prossima" = prima partita (in ordine di data) non iniziata da più di un'ora
+  const prossima = partiteDarsenal.find(p => new Date(p.data_ora) >= soglia);
+  const prossimaId = prossima ? String(prossima.id) : null;
 
-  // Individuiamo prima qual è la "prossima" partita valida (la più vicina nel futuro o iniziata da meno di un'ora)
-  let prossimaPartitaId = null;
-  const partiteFutureORecenti = partiteDarsenal.filter(p => new Date(p.data_ora) >= sogliaUnOraFa);
-  if (partiteFutureORecenti.length > 0) {
-    // Ordina per vicinanza temporale alla data odierna
-    partiteFutureORecenti.sort((a, b) => Math.abs(new Date(a.data_ora) - adesso) - Math.abs(new Date(b.data_ora) - adesso));
-    prossimaPartitaId = String(partiteFutureORecenti[0].id);
-  }
-
-  let indexProssimaTrovata = false;
-
-  container.innerHTML = partiteDarsenal.map(p => {
+  partiteAssenzeCache = partiteDarsenal.map(p => {
     const d = new Date(p.data_ora);
-    const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
-    const oraFormatted = !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+    let stato;
+    if (String(p.id) === prossimaId) stato = 'prossima';
+    else if (d > adesso) stato = 'futura';
+    else stato = p.assenze_salvate ? 'salvata' : 'da_registrare';
+    const avversario = (p.squadra_casa || '').toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
+    return { ...p, stato, avversario };
+  });
 
-    const isPassata = d <= adesso;
-    const isProssimaRegola = String(p.id) === prossimaPartitaId;
-    const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
+  container.innerHTML = partiteAssenzeCache.map(p => {
+    const d = new Date(p.data_ora);
+    const dataF = !isNaN(d) ? d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
+    const oraF = !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
 
-    let sondaggioId = null;
-    if (tuttePartiteSondaggio) {
-      const sondaggioTrovato = tuttePartiteSondaggio.find(s => 
-        (p.data_ora && s.data_ora === p.data_ora) || 
-        (avversario && (s.squadra_avversaria || '').toLowerCase().includes(avversario.toLowerCase()))
-      );
-      if (sondaggioTrovato) sondaggioId = sondaggioTrovato.id;
-    }
-
-    // Se è la partita identificata come "Prossima" (o futura), forziamo giaSalvata a false
-    let giaSalvata = false;
-    if (!isProssimaRegola) {
-      giaSalvata = idsPresenzeSalvate.has(String(p.id)) || (sondaggioId && idsPresenzeSalvate.has(String(sondaggioId)));
-    }
-
-    let badgeStato = '';
-    let cardStyle = '';
-    let clickAction = '';
-
-    if (giaSalvata) {
-      badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">Giocata e Salvata</span>';
-      cardStyle = 'bg-slate-50 border-slate-200 opacity-90 cursor-pointer';
-      clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', true, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
-    } else if (isProssimaRegola) {
-      // È la prossima incontro ufficiale (o entro un'ora dall'inizio)
-      badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-black font-black">Prossima</span>';
+    let badge, cardStyle, click = `onclick="clickPartitaAssenze('${p.id}')"`;
+    if (p.stato === 'salvata') {
+      badge = '<span class="text-[9px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">Giocata e Salvata</span>';
+      cardStyle = 'bg-slate-50 border-slate-200 opacity-80 cursor-pointer';
+    } else if (p.stato === 'prossima') {
+      badge = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-black">Prossima</span>';
       cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
-      clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
-    } else if (isPassata) {
-      badgeStato = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-black font-black">Da Registrare</span>';
+    } else if (p.stato === 'da_registrare') {
+      badge = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-black">Da Registrare</span>';
       cardStyle = 'bg-white border-burgundy border-2 shadow-md cursor-pointer';
-      clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
     } else {
-      badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-500 px-2.5 py-0.5 rounded-full font-bold">Da giocare</span>';
+      badge = '<span class="text-[9px] bg-slate-200 text-slate-500 px-2.5 py-0.5 rounded-full font-bold">Da giocare</span>';
       cardStyle = 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed';
-      clickAction = '';
+      click = '';
     }
 
     return `
-      <div ${clickAction} class="p-4 rounded-2xl border ${cardStyle} transition-all hover:scale-[1.01]">
+      <div ${click} class="p-4 rounded-2xl border ${cardStyle} transition-all">
         <div class="flex justify-between items-center">
           <div>
-            <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
-            <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} alle ${oraFormatted} ${p.giornata ? `- ${p.giornata}` : ''}</p>
+            <p class="font-black text-xs text-slate-800">Darsenal vs ${p.avversario}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${dataF} alle ${oraF} ${p.giornata ? `- ${p.giornata}` : ''}</p>
           </div>
-          <div class="flex items-center gap-2">
-            ${badgeStato}
-          </div>
+          ${badge}
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
+}
+
+function clickPartitaAssenze(id) {
+  const p = partiteAssenzeCache.find(x => String(x.id) === String(id));
+  if (!p || p.stato === 'futura') return;
+
+  if (p.stato === 'salvata') {
+    mostraConfirm(
+      "Partita già registrata",
+      "Sei sicuro di voler accedere per visualizzare o modificare le assenze e le esclusioni registrate?",
+      () => apriDettaglioPartitaAssenze(p.id)
+    );
+  } else {
+    apriDettaglioPartitaAssenze(p.id); // prossima e da registrare: nessun popup
+  }
 }
 
 function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dataOra) {
@@ -365,152 +353,135 @@ function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dat
   }
 }
 
-// Mostra il dettaglio con i giocatori assenti/esclusi e il menu a tendina personalizzato in stile sito
-async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
-  let sondaggioId = null;
-  const { data: tuttePartiteSondaggio } = await db.from('partite').select('id, data_ora, squadra_avversaria');
-  if (tuttePartiteSondaggio) {
-    const sondaggioTrovato = tuttePartiteSondaggio.find(s => 
-      (dataOra && s.data_ora === dataOra) || 
-      (avversario && (s.squadra_avversaria || '').toLowerCase().includes(avversario.toLowerCase()))
-    );
-    if (sondaggioTrovato) sondaggioId = String(sondaggioTrovato.id);
-  }
+// ---------------------------------------------------------
+// DETTAGLIO PARTITA
+// ---------------------------------------------------------
+const ETICHETTE_ASSENZA = { non_disponibile: 'INDISPONIBILE (0)', escluso: 'ESCLUSO (+1)' };
 
-  partitaSelezionataAssenze = { id: partitaId, sondaggioId, avversario, dataOra };
+async function apriDettaglioPartitaAssenze(partitaId) {
+  const p = partiteAssenzeCache.find(x => String(x.id) === String(partitaId));
+  if (!p) return;
+
+  partitaSelezionataAssenze = { id: p.id };
 
   document.getElementById('vista-elenco-partite-assenze').classList.add('hidden');
   document.getElementById('vista-dettaglio-partita-assenze').classList.remove('hidden');
-
-  document.getElementById('assenze-titolo-partita').innerText = `Darsenal vs ${avversario}`;
-  const d = new Date(dataOra);
+  document.getElementById('assenze-titolo-partita').innerText = `Darsenal vs ${p.avversario}`;
+  const d = new Date(p.data_ora);
   document.getElementById('assenze-data-partita').innerText = !isNaN(d) ? d.toLocaleString('it-IT') : '';
+  document.getElementById('assenze-num-assenti').innerText = '- Assenti';
 
   const container = document.getElementById('assenze-lista-giocatori');
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">Caricamento giocatori...</div>`;
 
-  let giocatori = typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : [];
-  const { data: dbG } = await db.from('giocatori').select('*');
-  if (dbG && dbG.length > 0) giocatori = dbG;
+  const [{ data: dbG }, { data: sondaggi }, { data: salvate }] = await Promise.all([
+    db.from('giocatori').select('*'),
+    db.from('partite').select('id, data_ora, tipo_sondaggio'),
+    db.from('assenze_partita').select('nome_utente, tipo').eq('id_calendario', p.id)
+  ]);
 
-  let queryPresenze = db.from('presenze').select('*');
-  if (sondaggioId) {
-    queryPresenze = queryPresenze.or(`id_partita.eq.${partitaId},id_partita.eq.${sondaggioId}`);
-  } else {
-    queryPresenze = queryPresenze.eq('id_partita', partitaId);
-  }
-  const { data: presenzeMatch } = await queryPresenze;
+  const giocatori = (dbG && dbG.length > 0) ? dbG : (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
 
-  const presenzeMap = {};
-  (presenzeMatch || []).forEach(pr => {
-    const nomeNormKey = (pr.nome_utente || '').toLowerCase().trim();
-    if (!presenzeMap[nomeNormKey] || pr.stato === 'Presente') {
-      presenzeMap[nomeNormKey] = {
-        stato: pr.stato
-      };
-    }
-  });
+  // convocati = presenti sia sull'id del calendario sia su quello del sondaggio collegato
+  const ids = [String(p.id)];
+  const sondaggioId = trovaSondaggioIdPerPartita(p, sondaggi);
+  if (sondaggioId) ids.push(sondaggioId);
 
-  const giocatoriNonPresenti = giocatori.filter(g => {
-    const nome = g.nome_completo || g.nome;
-    const pData = presenzeMap[nome.toLowerCase().trim()];
-    return !pData || pData.stato !== 'Presente';
-  });
+  const { data: presenti } = await db.from('presenze')
+    .select('nome_utente').in('id_partita', ids).eq('stato', 'Presente');
 
-  let headerContatore = document.getElementById('assenze-num-assenti');
-  if (!headerContatore) {
-    const headerContainer = document.querySelector('#vista-dettaglio-partita-assenze .bg-white.p-4.rounded-2xl') || document.getElementById('assenze-titolo-partita').parentElement;
-    if (headerContainer) {
-      const badgeDiv = document.createElement('div');
-      badgeDiv.className = "text-right mt-1";
-      badgeDiv.innerHTML = `<span id="assenze-num-assenti" class="text-[10px] bg-slate-100 text-slate-600 px-3 py-1 rounded-full font-black">${giocatoriNonPresenti.length} Assenti</span>`;
-      headerContainer.appendChild(badgeDiv);
-    }
-  } else {
-    headerContatore.innerText = `${giocatoriNonPresenti.length} Assenti`;
-  }
+  const convocati = new Set((presenti || []).map(x => chiaveNome(x.nome_utente)));
+  const scelteSalvate = {};
+  (salvate || []).forEach(s => { scelteSalvate[chiaveNome(s.nome_utente)] = s.tipo; });
 
-  if (giocatoriNonPresenti.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore assente o escluso registrato per questa partita.</div>`;
+  giocatoriAssentiCorrenti = giocatori
+    .map(g => g.nome_completo || g.nome)
+    .filter(nome => !convocati.has(chiaveNome(nome)))
+    .sort((a, b) => a.localeCompare(b, 'it'));
+
+  document.getElementById('assenze-num-assenti').innerText = `${giocatoriAssentiCorrenti.length} Assenti`;
+
+  if (giocatoriAssentiCorrenti.length === 0) {
+    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore assente per questa partita.</div>`;
     return;
   }
 
-  container.innerHTML = giocatoriNonPresenti.map((g, idx) => {
-    const nome = g.nome_completo || g.nome;
-    const nomeNorm = nome.toLowerCase().trim();
-    const pData = presenzeMap[nomeNorm] || { stato: 'Assente' };
-    const isEscluso = pData.stato === 'Escluso';
-
-    const tipoSelezionato = isEscluso ? 'escluso' : 'non_disponibile';
-    const testoSelezionato = isEscluso ? `ESCLUSO (+1)` : `INDISPONIBILE (0)`;
-
+  container.innerHTML = giocatoriAssentiCorrenti.map((nome, idx) => {
+    const valore = scelteSalvate[chiaveNome(nome)] || '';   // vuoto = nessuna scelta di default
+    const testo = valore ? ETICHETTE_ASSENZA[valore] : 'Seleziona...';
+    const colore = valore ? 'text-slate-700' : 'text-slate-400';
     return `
-      <div class="p-2.5 flex justify-between items-center text-xs gap-2 border-b border-slate-50 last:border-0" data-giocatore-assente="${escapeHtmlAttr(nome)}">
+      <div class="p-2.5 flex justify-between items-center text-xs gap-2" data-idx="${idx}">
         <span class="font-bold text-slate-700 truncate w-[45%]" style="font-size: 11px;">${nome}</span>
-        
         <div class="custom-select-wrapper relative w-[55%]">
-          <div onclick="toggleCustomSelect('stato-assenza-${idx}')" id="display-stato-assenza-${idx}" class="p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 cursor-pointer flex justify-between items-center">
-            <span class="truncate">${testoSelezionato}</span>
+          <div onclick="toggleCustomSelect('stato-assenza-${idx}')" id="display-stato-assenza-${idx}" class="p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold cursor-pointer flex justify-between items-center">
+            <span class="truncate ${colore}">${testo}</span>
             <svg class="w-3 h-3 text-slate-400 shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </div>
           <div id="options-stato-assenza-${idx}" class="custom-select-options hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden">
-            <div onclick="selezionaStatoAssenza(${idx}, 'non_disponibile', 'INDISPONIBILE (0)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition-colors">
-              INDISPONIBILE (0)
-            </div>
-            <div onclick="selezionaStatoAssenza(${idx}, 'escluso', 'ESCLUSO (+1)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
-              ESCLUSO (+1)
-            </div>
+            <div onclick="selezionaStatoAssenza(${idx}, 'non_disponibile')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-50">INDISPONIBILE (0)</div>
+            <div onclick="selezionaStatoAssenza(${idx}, 'escluso')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer">ESCLUSO (+1)</div>
           </div>
-          <input type="hidden" id="input-stato-assenza-${idx}" value="${tipoSelezionato}">
+          <input type="hidden" id="input-stato-assenza-${idx}" value="${valore}">
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
-// Salvataggio basato sull'ID corretto del calendario
+window.selezionaStatoAssenza = function(idx, valore) {
+  document.getElementById(`input-stato-assenza-${idx}`).value = valore;
+  const span = document.querySelector(`#display-stato-assenza-${idx} span`);
+  if (span) {
+    span.innerText = ETICHETTE_ASSENZA[valore];
+    span.classList.remove('text-slate-400');
+    span.classList.add('text-slate-700');
+  }
+  document.getElementById(`options-stato-assenza-${idx}`)?.classList.add('hidden');
+};
+
+// ---------------------------------------------------------
+// SALVATAGGIO: tocca SOLO assenze_partita e il flag assenze_salvate
+// ---------------------------------------------------------
 async function salvaAssenzePartita() {
+  if (typeof isAdmin !== 'undefined' && !isAdmin) return;
   if (!partitaSelezionataAssenze) return;
+  const idCal = partitaSelezionataAssenze.id;
 
-  const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
-  const targetId = partitaSelezionataAssenze.id;
-  const sondaggioId = partitaSelezionataAssenze.sondaggioId;
+  const righe = [];
+  const mancanti = [];
+  giocatoriAssentiCorrenti.forEach((nome, idx) => {
+    const tipo = document.getElementById(`input-stato-assenza-${idx}`)?.value;
+    if (!tipo) mancanti.push(nome);
+    else righe.push({ id_calendario: idCal, nome_utente: nome, tipo });
+  });
 
-  let deleteQuery = db.from('presenze').delete();
-  if (sondaggioId) {
-    deleteQuery = deleteQuery.or(`id_partita.eq.${targetId},id_partita.eq.${sondaggioId}`);
-  } else {
-    deleteQuery = deleteQuery.eq('id_partita', targetId);
-  }
-  await deleteQuery;
-
-  for (let idx = 0; idx < rows.length; idx++) {
-    const row = rows[idx];
-    const nome = row.getAttribute('data-giocatore-assente');
-    const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
-    const tipoAssenza = inputEl ? inputEl.value : 'non_disponibile'; 
-    const stato = tipoAssenza === 'escluso' ? 'Escluso' : 'Assente';
-
-    if (nome) {
-      await db.from('presenze').insert([{
-        id_partita: targetId,
-        nome_utente: nome,
-        stato: stato
-      }]);
-    }
+  if (mancanti.length > 0) {
+    return mostraAlert(`Scegli Indisponibile o Escluso per: ${mancanti.join(', ')}`);
   }
 
-  await db.from('presenze').insert([{
-    id_partita: targetId,
-    nome_utente: '_SYSTEM_VERIFIED_',
-    stato: 'Verificato'
-  }]);
+  const { error: errDel } = await db.from('assenze_partita').delete().eq('id_calendario', idCal);
+  if (errDel) return mostraAlert("Errore nel salvataggio: " + errDel.message);
 
-  mostraAlert("Assenze ed esclusioni salvate con successo!");
+  if (righe.length > 0) {
+    const { error: errIns } = await db.from('assenze_partita').insert(righe);
+    if (errIns) return mostraAlert("Errore nel salvataggio: " + errIns.message);
+  }
+
+  const { error: errFlag } = await db.from('calendario_torneo').update({ assenze_salvate: true }).eq('id', idCal);
+  if (errFlag) return mostraAlert("Salvate le scelte, ma non il flag: " + errFlag.message);
+
+  await mostraAlert("Assenze ed esclusioni salvate con successo!");
   chiudiDettaglioPartitaAssenze();
   caricaPartiteAssenzeSupabase();
-  caricaTabellaGiocatoriInfo(); 
+  caricaTabellaGiocatoriInfo();
+  if (typeof currentUser !== 'undefined' && currentUser) caricaStatisticheUtente(currentUser);
 }
+
+function chiudiDettaglioPartitaAssenze() {
+  document.getElementById('vista-dettaglio-partita-assenze')?.classList.add('hidden');
+  document.getElementById('vista-elenco-partite-assenze')?.classList.remove('hidden');
+}
+
 // Funzione per gestire la selezione del menu custom in stile sito
 window.selezionaStatoAssenza = function(idx, valore, testo) {
   const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
@@ -526,15 +497,3 @@ window.selezionaStatoAssenza = function(idx, valore, testo) {
   if (optionsContainer) optionsContainer.classList.add('hidden');
 };
 
-
-function chiudiDettaglioPartitaAssenze() {
-  document.getElementById('vista-dettaglio-partita-assenze').classList.add('hidden');
-  document.getElementById('vista-elenco-partite-assenze').classList.remove('hidden');
-}
-
-
-// Helper di sicurezza per attributi HTML[cite: 98]
-function escapeHtmlAttr(str) {
-  if (!str) return '';
-  return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}

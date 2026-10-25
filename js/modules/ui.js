@@ -23,7 +23,11 @@ window.mostraAlert = function(messaggio, titolo = "Attenzione") {
   });
 };
 
-window.mostraConfirm = function(messaggio, titolo = "Conferma operazione") {
+window.mostraConfirm = function(a, b, c) {
+  const callback = typeof c === 'function' ? c : null;
+  const titolo = callback ? a : (b || "Conferma operazione");
+  const messaggio = callback ? b : a;
+
   return new Promise((resolve) => {
     const modal = document.getElementById('modal-custom-confirm');
     const titleEl = document.getElementById('modal-confirm-title');
@@ -32,20 +36,25 @@ window.mostraConfirm = function(messaggio, titolo = "Conferma operazione") {
     const btnCancel = document.getElementById('modal-confirm-btn-cancel');
     const btnClose = document.getElementById('modal-confirm-btn-close');
 
-    if (!modal) { return resolve(confirm(messaggio)); }
+    if (!modal) {
+      const ok = confirm(messaggio);
+      if (ok && callback) callback();
+      return resolve(ok);
+    }
 
     titleEl.innerText = titolo;
     msgEl.innerText = messaggio;
     modal.classList.remove('hidden');
 
-    const chiudiEResolvi = (valore) => {
+    const chiudi = (valore) => {
       modal.classList.add('hidden');
+      if (valore && callback) callback();
       resolve(valore);
     };
 
-    btnOk.onclick = () => chiudiEResolvi(true);
-    btnCancel.onclick = () => chiudiEResolvi(false);
-    if (btnClose) btnClose.onclick = () => chiudiEResolvi(false);
+    btnOk.onclick = () => chiudi(true);
+    btnCancel.onclick = () => chiudi(false);
+    if (btnClose) btnClose.onclick = () => chiudi(false);
   });
 };
 

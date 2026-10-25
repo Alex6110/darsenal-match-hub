@@ -247,7 +247,7 @@ async function caricaSondaggi() {
       }).join('');
 
       return `
-        <div class="w-full mb-6" id="partita-${partita.id}>
+        <div class="w-full mb-6" id="partita-${partita.id}">
           <div class="bg-white p-5 rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 to-burgundy"></div>
             ${adminDeleteBtn}
