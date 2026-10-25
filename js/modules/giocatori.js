@@ -480,7 +480,6 @@ async function salvaAssenzePartita() {
 
   const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
   const targetId = partitaSelezionataAssenze.id; // ID ufficiale del calendario
-  const sondaggioId = partitaSelezionataAssenze.sondaggioId;
 
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
@@ -490,26 +489,30 @@ async function salvaAssenzePartita() {
     const stato = tipoAssenza === 'escluso' ? 'Escluso' : 'Assente';
 
     if (nome) {
-      // 1. Raccogliamo tutti gli ID possibili associati a questa partita (calendario e vecchio sondaggio)
-      const idsDaEliminare = [targetId];
-      if (sondaggioId) idsDaEliminare.push(sondaggioId);
+      // Controlla se esiste già un record per questo giocatore legato al calendario o al vecchio sondaggio
+      let queryEsistente = db.from('presenze').select('*').ilike('nome_utente', nome);
+      if (partitaSelezionataAssenze.sondaggioId) {
+        queryEsistente = queryEsistente.or(`id_partita.eq.${targetId},id_partita.eq.${partitaSelezionataAssenze.sondaggioId}`);
+      } else {
+        queryEsistente = queryEsistente.eq('id_partita', targetId);
+      }
+      
+      const { data: esiste } = await queryEsistente;
 
-      // 2. Eliminiamo i record esistenti per questo utente su questa partita per azzerare conflitti 409
-      await db.from('presenze')
-        .delete()
-        .ilike('nome_utente', nome)
-        .in('id_partita', idsDaEliminare);
-
-      // 3. Inseriamo il record pulito e aggiornato con l'ID ufficiale del calendario
-      const { error: insertError } = await db.from('presenze').insert([{
-        id_partita: targetId,
-        nome_utente: nome,
-        stato: stato,
-        tipo_assenza: tipoAssenza
-      }]);
-
-      if (insertError) {
-        console.error("Errore salvataggio presenza per", nome, insertError);
+      if (esiste && esiste.length > 0) {
+        // Aggiorna tutti i record trovati (sia calendario che eventuale sondaggio) per uniformarli all'id del calendario
+        for (const record of esiste) {
+          await db.from('presenze')
+            .update({ id_partita: targetId, stato: stato, tipo_assenza: tipoAssenza })
+            .eq('id', record.id);
+        }
+      } else {
+        await db.from('presenze').insert([{
+          id_partita: targetId,
+          nome_utente: nome,
+          stato: stato,
+          tipo_assenza: tipoAssenza
+        }]);
       }
     }
   }
@@ -517,7 +520,7 @@ async function salvaAssenzePartita() {
   mostraAlert("Assenze ed esclusioni salvate con successo!");
   chiudiDettaglioPartitaAssenze();
   caricaPartiteAssenzeSupabase();
-  caricaTabellaGiocatoriInfo(); // Aggiorna subito la tabella info giocatori e le statistiche
+  caricaTabellaGiocatoriInfo(); 
 }
 
 // Funzione per gestire la selezione del menu custom in stile sito
