@@ -357,37 +357,50 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   const { data: dbG } = await db.from('giocatori').select('*');
   if (dbG && dbG.length > 0) giocatori = dbG;
 
-  const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaId);
+  // Recupera le presenze della partita specifica E lo storico generale per contare le assenze/esclusioni
+  const [{ data: presenze }, { data: tutteLePresenze }] = await Promise.all([
+    db.from('presenze').select('*').eq('id_partita', partitaId),
+    db.from('presenze').select('*')
+  ]);
+
   const presenzeMap = {};
   (presenze || []).forEach(pr => {
     presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato;
   });
 
+  // Mostra SOLO i giocatori che risultano effettivamente Assenti o Esclusi per questa partita 
+  // (escludendo chi ha votato 'Presente' o non ha votato se vuoi limitarlo ai soli assenti registrati)
   const giocatoriNonPresenti = giocatori.filter(g => {
     const nome = g.nome_completo || g.nome;
     const stato = presenzeMap[nome.toLowerCase().trim()];
-    return stato !== 'Presente';
+    return stato === 'Assente' || stato === 'Escluso';
   });
 
   if (giocatoriNonPresenti.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Tutti i giocatori sono stati presenti a questa partita!</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore registrato come assente per questa partita.</div>`;
     return;
   }
 
   container.innerHTML = giocatoriNonPresenti.map((g, idx) => {
     const nome = g.nome_completo || g.nome;
-    const statoCorrente = presenzeMap[nome.toLowerCase().trim()];
+    const nomeNorm = nome.toLowerCase().trim();
+    const statoCorrente = presenzeMap[nomeNorm];
     const isEscluso = statoCorrente === 'Escluso';
 
+    // Calcola il numero di volte che questo giocatore è stato assente o escluso in precedenza nello storico
+    const storicoGiocatore = (tutteLePresenze || []).filter(pr => (pr.nome_utente || '').toLowerCase().trim() === nomeNorm);
+    const numAssenzeStoriche = storicoGiocatore.filter(pr => pr.stato === 'Assente').length;
+    const numEsclusioniStoriche = storicoGiocatore.filter(pr => pr.stato === 'Escluso').length;
+
     return `
-      <div class="p-3 flex justify-between items-center text-xs gap-2" data-giocatore-assente="${escapeHtmlAttr(nome)}">
-        <span class="font-bold text-slate-700 truncate w-1/3">${nome}</span>
-        <div class="flex w-2/3 bg-slate-100 p-1 rounded-xl gap-1">
-          <button type="button" onclick="impostaStatoAssenza(${idx}, 'Assente')" id="btn-indisponibile-${idx}" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${!isEscluso ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}">
-            Indisponibile (0)
+      <div class="p-2.5 flex justify-between items-center text-xs gap-2" data-giocatore-assente="${escapeHtmlAttr(nome)}">
+        <span class="font-bold text-slate-700 truncate w-[40%]" style="font-size: 11px;">${nome}</span>
+        <div class="flex w-[60%] bg-slate-100 p-0.5 rounded-lg gap-1">
+          <button type="button" onclick="impostaStatoAssenza(${idx}, 'Assente')" id="btn-indisponibile-${idx}" class="flex-1 py-1 px-1 rounded-md text-[9px] font-bold transition-all truncate ${!isEscluso ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}">
+            Indisp. (${numAssenzeStoriche})
           </button>
-          <button type="button" onclick="impostaStatoAssenza(${idx}, 'Escluso')" id="btn-escluso-${idx}" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isEscluso ? 'bg-burgundy text-white shadow-sm' : 'text-slate-400'}">
-            Escluso (+1)
+          <button type="button" onclick="impostaStatoAssenza(${idx}, 'Escluso')" id="btn-escluso-${idx}" class="flex-1 py-1 px-1 rounded-md text-[9px] font-bold transition-all truncate ${isEscluso ? 'bg-burgundy text-white shadow-sm' : 'text-slate-400'}">
+            Escl. (${numEsclusioniStoriche})
           </button>
           <input type="hidden" id="input-stato-assenza-${idx}" value="${isEscluso ? 'Escluso' : 'Assente'}">
         </div>
