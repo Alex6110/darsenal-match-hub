@@ -4,10 +4,19 @@ let giocatoriAssentiCorrenti = [];
 const MS_ORA = 60 * 60 * 1000;
 const chiaveNome = (s) => String(s || '').toLowerCase().trim();
 
-function trovaSondaggioIdPerPartita(p, sondaggi) {
+function trovaSondaggioIdsPerPartita(p, sondaggi) {
   const t = new Date(p.data_ora).getTime();
-  const s = (sondaggi || []).find(x => new Date(x.data_ora).getTime() === t && x.tipo_sondaggio !== 'annullato');
-  return s ? String(s.id) : null;
+  const giorno = new Date(p.data_ora).toDateString();
+  const av = chiaveNome(p.avversario);
+  return (sondaggi || [])
+    .filter(x => {
+      const stessaOra = new Date(x.data_ora).getTime() === t;
+      const stessoGiornoEAvv = av
+        && new Date(x.data_ora).toDateString() === giorno
+        && chiaveNome(x.squadra_avversaria).includes(av);
+      return stessaOra || stessoGiornoEAvv;
+    })
+    .map(x => String(x.id));
 }
 
 // Carica e calcola le statistiche personali per il menu laterale dell'utente[cite: 98]
@@ -363,16 +372,15 @@ async function apriDettaglioPartitaAssenze(partitaId) {
 
   const [{ data: dbG }, { data: sondaggi }, { data: salvate }] = await Promise.all([
     db.from('giocatori').select('*'),
-    db.from('partite').select('id, data_ora, tipo_sondaggio'),
+    ddb.from('partite').select('id, data_ora, tipo_sondaggio, squadra_avversaria'),
     db.from('assenze_partita').select('nome_utente, tipo').eq('id_calendario', p.id)
   ]);
 
   const giocatori = (dbG && dbG.length > 0) ? dbG : (typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : []);
 
   // convocati = presenti sia sull'id del calendario sia su quello del sondaggio collegato
-  const ids = [String(p.id)];
-  const sondaggioId = trovaSondaggioIdPerPartita(p, sondaggi);
-  if (sondaggioId) ids.push(sondaggioId);
+  const ids = [String(p.id), ...trovaSondaggioIdsPerPartita(p, sondaggi)];
+  console.log('Assenze: id usati per', p.avversario, ids);
 
   const { data: presenti } = await db.from('presenze')
     .select('nome_utente').in('id_partita', ids).eq('stato', 'Presente');
