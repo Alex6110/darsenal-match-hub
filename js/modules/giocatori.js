@@ -244,9 +244,11 @@ async function caricaPartiteAssenzeSupabase() {
 
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
 
-  const [{ data: partite, error }, { data: tuttePresenze }] = await Promise.all([
+  // MODIFICA QUI: Aggiunto il recupero di partite (sondaggi)
+  const [{ data: partite, error }, { data: tuttePresenze }, { data: tuttePartiteSondaggio }] = await Promise.all([
     db.from('calendario_torneo').select('*').order('data_ora', { ascending: true }),
-    db.from('presenze').select('id_partita, stato')
+    db.from('presenze').select('id_partita, stato'),
+    db.from('partite').select('id, data_ora, squadra_avversaria')
   ]);
 
   if (error || !partite) {
@@ -265,7 +267,7 @@ async function caricaPartiteAssenzeSupabase() {
     return;
   }
 
-  const matchIdsSalvati = new Set(
+  const idsPresenzeSalvate = new Set(
     (tuttePresenze || [])
       .filter(pr => pr.stato === 'Assente' || pr.stato === 'Escluso')
       .map(pr => String(pr.id_partita))
@@ -281,7 +283,18 @@ async function caricaPartiteAssenzeSupabase() {
 
     const isPassata = d <= adesso;
     const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
-    const giaSalvata = matchIdsSalvati.has(String(p.id));
+
+    // MODIFICA QUI: Ricerca dell'eventuale ID sondaggio collegato per verificare se la partita è stata salvata
+    let sondaggioId = null;
+    if (tuttePartiteSondaggio) {
+      const sondaggioTrovato = tuttePartiteSondaggio.find(s => 
+        (p.data_ora && s.data_ora === p.data_ora) || 
+        (avversario && (s.squadra_avversaria || '').toLowerCase().includes(avversario.toLowerCase()))
+      );
+      if (sondaggioTrovato) sondaggioId = sondaggioTrovato.id;
+    }
+
+    const giaSalvata = idsPresenzeSalvate.has(String(p.id)) || (sondaggioId && idsPresenzeSalvate.has(String(sondaggioId)));
 
     let badgeStato = '';
     let cardStyle = '';
@@ -323,7 +336,6 @@ async function caricaPartiteAssenzeSupabase() {
     `;
   }).join('');
 }
-
 function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dataOra) {
   if (giaSalvata) {
     mostraConfirm(
