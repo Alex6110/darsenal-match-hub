@@ -263,24 +263,65 @@ async function caricaPartiteAssenzeSupabase() {
     return;
   }
 
-  container.innerHTML = partiteDarsenal.map(p => {
+  const adesso = new Date();
+
+  // Trova l'indice della prossima partita in calendario
+  let indiceProssima = partiteDarsenal.findIndex(p => {
+    const d = new Date(p.data_ora);
+    return !p.completata && !p.risultato && d > adesso;
+  });
+
+  if (indiceProssima === -1) indiceProssima = partiteDarsenal.length;
+
+  container.innerHTML = partiteDarsenal.map((p, index) => {
     const d = new Date(p.data_ora);
     const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
     const oraFormatted = !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
     const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
 
+    const isPassata = p.completata || p.risultato || d <= adesso;
+    const isProssima = (index === indiceProssima);
+
+    let cardClass = "";
+    let badgeHtml = "";
+    let clickAction = "";
+
+    if (isPassata) {
+      // Partita già giocata: grigiata ma modificabile con conferma
+      cardClass = "p-4 rounded-2xl border bg-slate-50 opacity-70 border-slate-200 shadow-sm cursor-pointer transition-all";
+      badgeHtml = `<span class="text-[9px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-black">Giocata (Modificabile)</span>`;
+      clickAction = `cliccaPartitaPassataAssenze('${p.id}', '${escapeHtmlAttr(avversario)}', '${p.data_ora}')`;
+    } else if (isProssima) {
+      // Prossima partita da giocare: attiva
+      cardClass = "p-4 rounded-2xl border bg-white border-burgundy shadow-md cursor-pointer transition-all hover:scale-[1.01]";
+      badgeHtml = `<span class="text-[9px] bg-burgundy text-white px-2.5 py-0.5 rounded-full font-black">Prossima Gara</span>`;
+      clickAction = `apriDettaglioPartitaAssenze('${p.id}', '${escapeHtmlAttr(avversario)}', '${p.data_ora}')`;
+    } else {
+      // Partite future successive alla prossima: grigiate diversamente e non modificabili
+      cardClass = "p-4 rounded-2xl border bg-slate-100 opacity-40 border-slate-200 shadow-xs cursor-not-allowed";
+      badgeHtml = `<span class="text-[9px] bg-slate-300 text-slate-700 px-2.5 py-0.5 rounded-full font-black">Non Ancora Modificabile</span>`;
+      clickAction = `mostraAlert("Questa partita non è la prossima in calendario, non è ancora possibile modificare le assenze.")`;
+    }
+
     return `
-      <div onclick="apriDettaglioPartitaAssenze('${p.id}', '${escapeHtmlAttr(avversario)}', '${p.data_ora}')" class="p-4 rounded-2xl border bg-white border-slate-200 shadow-sm cursor-pointer transition-all hover:scale-[1.01]">
+      <div onclick="${clickAction}" class="${cardClass}">
         <div class="flex justify-between items-center">
           <div>
             <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
             <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} alle ${oraFormatted}</p>
           </div>
-          <span class="text-[9px] bg-burgundy/10 text-burgundy px-2.5 py-0.5 rounded-full font-black">Gestisci Assenze</span>
+          ${badgeHtml}
         </div>
       </div>
     `;
   }).join('');
+}
+
+async function cliccaPartitaPassataAssenze(partitaId, avversario, dataOra) {
+  const confermato = await mostraConfirm("Questa partita è già stata giocata. Vuoi modificare le assenze e le esclusioni registrate?");
+  if (confermato) {
+    apriDettaglioPartitaAssenze(partitaId, avversario, dataOra);
+  }
 }
 
 // Mostra il dettaglio con i giocatori non presenti e i selettori Indisponibile / Escluso
