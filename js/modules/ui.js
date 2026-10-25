@@ -68,7 +68,7 @@ async function switchTab(tabName) {
     if (el) el.classList.add('hidden');
   });
 
-  ['partite', 'classifica', 'sondaggi', 'saldo', 'giocatori'].forEach(t => {
+  ['partite', 'classifica', 'sondaggi', 'saldo', 'giocatori', 'formazione', 'messaggi'].forEach(t => {
     const navBtn = document.getElementById(`nav-${t}`);
     if (navBtn) {
       navBtn.classList.remove('text-burgundy');
@@ -1160,6 +1160,9 @@ async function switchTab(tabName) {
       activeBtn.classList.add('text-burgundy');
       activeBtn.classList.remove('text-slate-400');
     }
+  }
+  if (tabName === 'formazione') {
+    if (typeof caricaFormazione === 'function') caricaFormazione();
   }
   if (tabName === 'giocatori') {
     if (typeof switchTabGiocatori === 'function') switchTabGiocatori('info');
