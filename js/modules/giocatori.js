@@ -159,11 +159,12 @@ async function caricaTabellaGiocatoriInfo() {
     const { data: dbG } = await db.from('giocatori').select('*');
     if (dbG && dbG.length > 0) giocatori = dbG;
 
-    const [{ data: calendario }, { data: presenze }, { data: eventi }, { data: tuttePartiteSondaggio }] = await Promise.all([
+    const [{ data: calendario }, { data: presenze }, { data: eventi }, { data: tuttePartiteSondaggio }, { data: assenzeSalvate }] = await Promise.all([
       db.from('calendario_torneo').select('*').order('data_ora', { ascending: false }),
       db.from('presenze').select('*'),
       db.from('eventi_partita').select('*'),
-      db.from('partite').select('id, data_ora')
+      db.from('partite').select('id, data_ora'),
+      db.from('assenze_partita').select('nome_utente, tipo')
     ]);
 
     const partiteGiocateSquadra = (calendario || []).filter(p => 
