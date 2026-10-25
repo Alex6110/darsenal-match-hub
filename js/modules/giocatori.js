@@ -372,7 +372,7 @@ async function apriDettaglioPartitaAssenze(partitaId) {
 
   const [{ data: dbG }, { data: sondaggi }, { data: salvate }] = await Promise.all([
     db.from('giocatori').select('*'),
-    ddb.from('partite').select('id, data_ora, tipo_sondaggio, squadra_avversaria'),
+    db.from('partite').select('id, data_ora, tipo_sondaggio, squadra_avversaria'),
     db.from('assenze_partita').select('nome_utente, tipo').eq('id_calendario', p.id)
   ]);
 
