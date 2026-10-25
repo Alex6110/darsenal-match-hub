@@ -339,9 +339,20 @@ function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dat
   }
 }
 
-// Mostra il dettaglio con i giocatori assenti/esclusi (escludendo chi ha votato Presente) e il menu a tendina per lo stato
+// Mostra il dettaglio con i giocatori assenti/esclusi e il menu a tendina personalizzato in stile sito
 async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
-  partitaSelezionataAssenze = { id: partitaId, avversario, dataOra };
+  // 1. Trova l'eventuale ID del sondaggio corrispondente nella tabella partite per allineare gli ID
+  let sondaggioId = null;
+  const { data: tuttePartiteSondaggio } = await db.from('partite').select('id, data_ora, squadra_avversaria');
+  if (tuttePartiteSondaggio) {
+    const sondaggioTrovato = tuttePartiteSondaggio.find(s => 
+      (dataOra && s.data_ora === dataOra) || 
+      (avversario && (s.squadra_avversaria || '').toLowerCase().includes(avversario.toLowerCase()))
+    );
+    if (sondaggioTrovato) sondaggioId = sondaggioTrovato.id;
+  }
+
+  partitaSelezionataAssenze = { id: partitaId, sondaggioId, avversario, dataOra };
 
   document.getElementById('vista-elenco-partite-assenze').classList.add('hidden');
   document.getElementById('vista-dettaglio-partita-assenze').classList.remove('hidden');
@@ -357,25 +368,30 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   const { data: dbG } = await db.from('giocatori').select('*');
   if (dbG && dbG.length > 0) giocatori = dbG;
 
-  // Recupera le presenze della partita specifica E lo storico generale per contare le assenze/esclusioni
-  const [{ data: presenze }, { data: tutteLePresenze }] = await Promise.all([
-    db.from('presenze').select('*').eq('id_partita', partitaId),
-    db.from('presenze').select('*')
-  ]);
+  // 2. Raccoglie tutti gli ID possibili per intercettare correttamente le presenze ovunque siano salvate
+  const idsPossibili = [String(partitaId)];
+  if (sondaggioId) idsPossibili.push(String(sondaggioId));
+
+  const { data: tutteLePresenze } = await db.from('presenze').select('*');
+
+  const presenzeMatch = (tutteLePresenze || []).filter(pr => {
+    const mId = String(pr.id_partita || pr.id_sondaggio || pr.partita_id);
+    return idsPossibili.includes(mId);
+  });
 
   const presenzeMap = {};
-  (presenze || []).forEach(pr => {
+  presenzeMatch.forEach(pr => {
     presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato;
   });
 
-  // Logica inversa: mostra tutti i giocatori tranne quelli presenti alla partita
+  // 3. Logica inversa: mostra tutti i giocatori tranne chi ha votato 'Presente'
   const giocatoriNonPresenti = giocatori.filter(g => {
     const nome = g.nome_completo || g.nome;
     const stato = presenzeMap[nome.toLowerCase().trim()];
     return stato !== 'Presente';
   });
 
-  // Aggiungiamo il contatore dei giocatori assenti nell'intestazione (rettangolo azzurro)
+  // Contatore dei giocatori assenti nell'intestazione (rettangolo azzurro)
   let headerContatore = document.getElementById('assenze-num-assenti');
   if (!headerContatore) {
     const headerContainer = document.querySelector('#vista-dettaglio-partita-assenze .bg-white.p-4.rounded-2xl, #vista-dettaglio-partita-assenze div > .flex.justify-between') || document.getElementById('assenze-titolo-partita').parentElement;
@@ -401,39 +417,64 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
     const isEscluso = statoCorrente === 'Escluso';
     const statoSelezionato = isEscluso ? 'Escluso' : 'Assente';
 
-    // Calcola il numero di volte che questo giocatore è stato assente o escluso in precedenza nello storico
+    // Calcolo storico assenze/esclusioni
     const storicoGiocatore = (tutteLePresenze || []).filter(pr => (pr.nome_utente || '').toLowerCase().trim() === nomeNorm);
     const numAssenzeStoriche = storicoGiocatore.filter(pr => pr.stato === 'Assente').length;
     const numEsclusioniStoriche = storicoGiocatore.filter(pr => pr.stato === 'Escluso').length;
 
+    const testoSelezionato = statoSelezionato === 'Escluso' 
+      ? `ESCLUSO (+1) (${numEsclusioniStoriche})` 
+      : `INDISPONIBILE (${numAssenzeStoriche})`;
+
     return `
       <div class="p-2.5 flex justify-between items-center text-xs gap-2 border-b border-slate-50 last:border-0" data-giocatore-assente="${escapeHtmlAttr(nome)}">
         <span class="font-bold text-slate-700 truncate w-[45%]" style="font-size: 11px;">${nome}</span>
-        <div class="w-[55%] flex justify-end">
-          <select id="input-stato-assenza-${idx}" class="w-full p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-burgundy">
-            <option value="Assente" ${statoSelezionato === 'Assente' ? 'selected' : ''}>INDISPONIBILE (${numAssenzeStoriche})</option>
-            <option value="Escluso" ${statoSelezionato === 'Escluso' ? 'selected' : ''}>ESCLUSO (+1) (${numEsclusioniStoriche})</option>
-          </select>
+        
+        <!-- Menu a tendina custom in stile sito -->
+        <div class="custom-select-wrapper relative w-[55%]">
+          <div onclick="toggleCustomSelect('stato-assenza-${idx}')" id="display-stato-assenza-${idx}" class="p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 cursor-pointer flex justify-between items-center">
+            <span class="truncate">${testoSelezionato}</span>
+            <svg class="w-3 h-3 text-slate-400 shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </div>
+          <div id="options-stato-assenza-${idx}" class="custom-select-options hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden">
+            <div onclick="selezionaStatoAssenza(${idx}, 'Assente', 'INDISPONIBILE (${numAssenzeStoriche})')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition-colors">
+              INDISPONIBILE (${numAssenzeStoriche})
+            </div>
+            <div onclick="selezionaStatoAssenza(${idx}, 'Escluso', 'ESCLUSO (+1) (${numEsclusioniStoriche})')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
+              ESCLUSO (+1) (${numEsclusioniStoriche})
+            </div>
+          </div>
+          <input type="hidden" id="input-stato-assenza-${idx}" value="${statoSelezionato}">
         </div>
       </div>
     `;
   }).join('');
 }
 
-function chiudiDettaglioPartitaAssenze() {
-  document.getElementById('vista-dettaglio-partita-assenze').classList.add('hidden');
-  document.getElementById('vista-elenco-partite-assenze').classList.remove('hidden');
-}
+// Funzione per gestire la selezione del menu custom in stile sito
+window.selezionaStatoAssenza = function(idx, valore, testo) {
+  const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
+  if (inputEl) inputEl.value = valore;
 
-// Salva le decisioni e aggiorna il database e le statistiche esclusioni[cite: 98]
+  const displayEl = document.getElementById(`display-stato-assenza-${idx}`);
+  if (displayEl) {
+    const span = displayEl.querySelector('span');
+    if (span) span.innerText = testo;
+  }
+
+  const optionsContainer = document.getElementById(`options-stato-assenza-${idx}`);
+  if (optionsContainer) optionsContainer.classList.add('hidden');
+};
+
+// Salvataggio basato sull'ID corretto (sondaggio o calendario)
 async function salvaAssenzePartita() {
   if (!partitaSelezionataAssenze) return;
 
   const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
-  const partiteId = partitaSelezionataAssenze.id;
+  const targetId = partitaSelezionataAssenze.sondaggioId || partitaSelezionataAssenze.id;
 
   for (let idx = 0; idx < rows.length; idx++) {
-    const row = rows.length ? rows[idx] : null;
+    const row = rows[idx];
     const nome = row.getAttribute('data-giocatore-assente');
     const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
     const nuovoStato = inputEl ? inputEl.value : 'Assente';
@@ -441,17 +482,17 @@ async function salvaAssenzePartita() {
     if (nome) {
       const { data: esiste } = await db.from('presenze')
         .select('*')
-        .eq('id_partita', partiteId)
+        .eq('id_partita', targetId)
         .ilike('nome_utente', nome);
 
       if (esiste && esiste.length > 0) {
         await db.from('presenze')
           .update({ stato: nuovoStato })
-          .eq('id_partita', partiteId)
+          .eq('id_partita', targetId)
           .ilike('nome_utente', nome);
       } else {
         await db.from('presenze').insert([{
-          id_partita: partiteId,
+          id_partita: targetId,
           nome_utente: nome,
           stato: nuovoStato
         }]);
@@ -463,6 +504,12 @@ async function salvaAssenzePartita() {
   chiudiDettaglioPartitaAssenze();
   caricaPartiteAssenzeSupabase();
 }
+
+function chiudiDettaglioPartitaAssenze() {
+  document.getElementById('vista-dettaglio-partita-assenze').classList.add('hidden');
+  document.getElementById('vista-elenco-partite-assenze').classList.remove('hidden');
+}
+
 
 // Helper di sicurezza per attributi HTML[cite: 98]
 function escapeHtmlAttr(str) {
