@@ -279,11 +279,11 @@ async function caricaPartiteAssenzeSupabase() {
 
   // Individuiamo prima qual è la "prossima" partita valida (la più vicina nel futuro o iniziata da meno di un'ora)
   let prossimaPartitaId = null;
-  const partite FUTURE_O_RECENTI = partiteDarsenal.filter(p => new Date(p.data_ora) >= sogliaUnOraFa);
-  if (FUTURE_O_RECENTI.length > 0) {
+  const partiteFutureORecenti = partiteDarsenal.filter(p => new Date(p.data_ora) >= sogliaUnOraFa);
+  if (partiteFutureORecenti.length > 0) {
     // Ordina per vicinanza temporale alla data odierna
-    FUTURE_O_RECENTI.sort((a, b) => Math.abs(new Date(a.data_ora) - adesso) - Math.abs(new Date(b.data_ora) - adesso));
-    prossimaPartitaId = String(FUTURE_O_RECENTI[0].id);
+    partiteFutureORecenti.sort((a, b) => Math.abs(new Date(a.data_ora) - adesso) - Math.abs(new Date(b.data_ora) - adesso));
+    prossimaPartitaId = String(partiteFutureORecenti[0].id);
   }
 
   let indexProssimaTrovata = false;
