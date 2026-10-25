@@ -274,6 +274,18 @@ async function caricaPartiteAssenzeSupabase() {
   );
 
   const adesso = new Date();
+  // Calcoliamo la soglia di 1 ora dopo l'inizio per la partita in corso/prossima
+  const sogliaUnOraFa = new Date(adesso.getTime() - 60 * 60 * 1000);
+
+  // Individuiamo prima qual è la "prossima" partita valida (la più vicina nel futuro o iniziata da meno di un'ora)
+  let prossimaPartitaId = null;
+  const partite FUTURE_O_RECENTI = partiteDarsenal.filter(p => new Date(p.data_ora) >= sogliaUnOraFa);
+  if (FUTURE_O_RECENTI.length > 0) {
+    // Ordina per vicinanza temporale alla data odierna
+    FUTURE_O_RECENTI.sort((a, b) => Math.abs(new Date(a.data_ora) - adesso) - Math.abs(new Date(b.data_ora) - adesso));
+    prossimaPartitaId = String(FUTURE_O_RECENTI[0].id);
+  }
+
   let indexProssimaTrovata = false;
 
   container.innerHTML = partiteDarsenal.map(p => {
@@ -282,9 +294,9 @@ async function caricaPartiteAssenzeSupabase() {
     const oraFormatted = !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
 
     const isPassata = d <= adesso;
+    const isProssimaRegola = String(p.id) === prossimaPartitaId;
     const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
 
-    // MODIFICA QUI: Ricerca dell'eventuale ID sondaggio collegato per verificare se la partita è stata salvata
     let sondaggioId = null;
     if (tuttePartiteSondaggio) {
       const sondaggioTrovato = tuttePartiteSondaggio.find(s => 
@@ -294,7 +306,11 @@ async function caricaPartiteAssenzeSupabase() {
       if (sondaggioTrovato) sondaggioId = sondaggioTrovato.id;
     }
 
-    const giaSalvata = idsPresenzeSalvate.has(String(p.id)) || (sondaggioId && idsPresenzeSalvate.has(String(sondaggioId)));
+    // Se è la partita identificata come "Prossima" (o futura), forziamo giaSalvata a false
+    let giaSalvata = false;
+    if (!isProssimaRegola) {
+      giaSalvata = idsPresenzeSalvate.has(String(p.id)) || (sondaggioId && idsPresenzeSalvate.has(String(sondaggioId)));
+    }
 
     let badgeStato = '';
     let cardStyle = '';
@@ -304,21 +320,19 @@ async function caricaPartiteAssenzeSupabase() {
       badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">Giocata e Salvata</span>';
       cardStyle = 'bg-slate-50 border-slate-200 opacity-90 cursor-pointer';
       clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', true, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
+    } else if (isProssimaRegola) {
+      // È la prossima incontro ufficiale (o entro un'ora dall'inizio)
+      badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-black font-black">Prossima</span>';
+      cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
+      clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
     } else if (isPassata) {
-      badgeStato = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-black">Da Registrare</span>';
+      badgeStato = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-black font-black">Da Registrare</span>';
       cardStyle = 'bg-white border-burgundy border-2 shadow-md cursor-pointer';
       clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
     } else {
-      if (!indexProssimaTrovata) {
-        indexProssimaTrovata = true;
-        badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-black font-black">Prossima</span>';
-        cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
-        clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
-      } else {
-        badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-500 px-2.5 py-0.5 rounded-full font-bold">Da giocare</span>';
-        cardStyle = 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed';
-        clickAction = '';
-      }
+      badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-500 px-2.5 py-0.5 rounded-full font-bold">Da giocare</span>';
+      cardStyle = 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed';
+      clickAction = '';
     }
 
     return `
@@ -336,6 +350,7 @@ async function caricaPartiteAssenzeSupabase() {
     `;
   }).join('');
 }
+
 function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dataOra) {
   if (giaSalvata) {
     mostraConfirm(
