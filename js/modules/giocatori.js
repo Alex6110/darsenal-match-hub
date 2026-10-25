@@ -381,15 +381,36 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
 
     return `
       <div class="p-3 flex justify-between items-center text-xs gap-2" data-giocatore-assente="${escapeHtmlAttr(nome)}">
-        <span class="font-bold text-slate-700 truncate w-1/2">${nome}</span>
-        <select id="select-assenza-${idx}" class="w-1/2 p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:border-burgundy cursor-pointer">
-          <option value="Assente" ${!isEscluso ? 'selected' : ''}>Indisponibilità</option>
-          <option value="Escluso" ${isEscluso ? 'selected' : ''}>Esclusione (+1 pt)</option>
-        </select>
+        <span class="font-bold text-slate-700 truncate w-1/3">${nome}</span>
+        <div class="flex w-2/3 bg-slate-100 p-1 rounded-xl gap-1">
+          <button type="button" onclick="impostaStatoAssenza(${idx}, 'Assente')" id="btn-indisponibile-${idx}" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${!isEscluso ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400'}">
+            Indisponibile (0)
+          </button>
+          <button type="button" onclick="impostaStatoAssenza(${idx}, 'Escluso')" id="btn-escluso-${idx}" class="flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isEscluso ? 'bg-burgundy text-white shadow-sm' : 'text-slate-400'}">
+            Escluso (+1)
+          </button>
+          <input type="hidden" id="input-stato-assenza-${idx}" value="${isEscluso ? 'Escluso' : 'Assente'}">
+        </div>
       </div>
     `;
   }).join('');
 }
+
+window.impostaStatoAssenza = function(idx, stato) {
+  const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
+  const btnInd = document.getElementById(`btn-indisponibile-${idx}`);
+  const btnEsc = document.getElementById(`btn-escluso-${idx}`);
+
+  if (inputEl) inputEl.value = stato;
+
+  if (stato === 'Assente') {
+    btnInd.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-white text-slate-800 shadow-sm";
+    btnEsc.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-slate-400";
+  } else {
+    btnInd.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-slate-400";
+    btnEsc.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-burgundy text-white shadow-sm";
+  }
+};
 
 function chiudiDettaglioPartitaAssenze() {
   document.getElementById('vista-dettaglio-partita-assenze').classList.add('hidden');
@@ -404,10 +425,10 @@ async function salvaAssenzePartita() {
   const partiteId = partitaSelezionataAssenze.id;
 
   for (let idx = 0; idx < rows.length; idx++) {
-    const row = rows[idx];
+    const row = rows.length ? rows[idx] : null;
     const nome = row.getAttribute('data-giocatore-assente');
-    const selectEl = document.getElementById(`select-assenza-${idx}`);
-    const nuovoStato = selectEl ? selectEl.value : 'Assente';
+    const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
+    const nuovoStato = inputEl ? inputEl.value : 'Assente';
 
     if (nome) {
       const { data: esiste } = await db.from('presenze')
