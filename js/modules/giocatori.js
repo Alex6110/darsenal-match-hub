@@ -368,16 +368,16 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
     presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato;
   });
 
-  // Mostra SOLO i giocatori che risultano effettivamente Assenti o Esclusi per questa partita 
-  // (escludendo chi ha votato 'Presente' o non ha votato se vuoi limitarlo ai soli assenti registrati)
+  // Mostra tutti i giocatori della rosa che NON sono segnati come 'Presente' 
+  // (includendo chi è assente, escluso o non ha ancora votato, così la lista non è mai vuota)
   const giocatoriNonPresenti = giocatori.filter(g => {
     const nome = g.nome_completo || g.nome;
     const stato = presenzeMap[nome.toLowerCase().trim()];
-    return stato === 'Assente' || stato === 'Escluso';
+    return stato !== 'Presente';
   });
 
   if (giocatoriNonPresenti.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore registrato come assente per questa partita.</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Tutti i giocatori risultano presenti per questa partita.</div>`;
     return;
   }
 
@@ -417,11 +417,11 @@ window.impostaStatoAssenza = function(idx, stato) {
   if (inputEl) inputEl.value = stato;
 
   if (stato === 'Assente') {
-    btnInd.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-white text-slate-800 shadow-sm";
-    btnEsc.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-slate-400";
+    if (btnInd) btnInd.className = "flex-1 py-1 px-1 rounded-md text-[9px] font-bold transition-all truncate bg-white text-slate-800 shadow-sm";
+    if (btnEsc) btnEsc.className = "flex-1 py-1 px-1 rounded-md text-[9px] font-bold transition-all truncate text-slate-400";
   } else {
-    btnInd.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all text-slate-400";
-    btnEsc.className = "flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all bg-burgundy text-white shadow-sm";
+    if (btnInd) btnInd.className = "flex-1 py-1 px-1 rounded-md text-[9px] font-bold transition-all truncate text-slate-400";
+    if (btnEsc) btnEsc.className = "flex-1 py-1 px-1 rounded-md text-[9px] font-bold transition-all truncate bg-burgundy text-white shadow-sm";
   }
 };
 
