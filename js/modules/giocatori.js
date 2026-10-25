@@ -43,7 +43,7 @@ async function caricaStatisticheUtente(nomeUtente) {
     // Presenze effettive (nominatore) / Partite totali giocate dalla squadra (denominatore)[cite: 98]
     const presenzeTotali = presenzeGiocatore.filter(p => p.stato === 'Presente').length;
     const esclusioniTotali = presenzeGiocatore.filter(p => p.tipo_assenza === 'escluso' || p.stato === 'Escluso').length;
-    const assenzeTotali = presenzeGiocatore.filter(p => p.tipo_assenza === 'non_disponibile' || p.stato === 'Assente').length;
+    const assenzeTotali = Math.max(0, numPartiteSquadra - presenzeTotali);
 
     // Ultima giocata[cite: 98]
     const presenzeEffettive = presenzeGiocatore.filter(p => p.stato === 'Presente');
@@ -269,7 +269,7 @@ async function caricaPartiteAssenzeSupabase() {
 
   const idsPresenzeSalvate = new Set(
     (tuttePresenze || [])
-      .filter(pr => pr.stato === 'Assente' || pr.stato === 'Escluso')
+      .filter(pr => pr.stato === 'Assente' || pr.stato === 'Escluso' || pr.stato === 'Verificato')
       .map(pr => String(pr.id_partita))
   );
 
@@ -365,7 +365,6 @@ function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dat
   }
 }
 
-// Mostra il dettaglio con i giocatori assenti/esclusi e il menu a tendina personalizzato in stile sito
 // Mostra il dettaglio con i giocatori assenti/esclusi e il menu a tendina personalizzato in stile sito
 async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   // Cerchiamo subito l'eventuale ID del sondaggio collegato per data/avversario
@@ -475,14 +474,23 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
 }
 
 // Salvataggio basato sull'ID corretto del calendario
-// Salvataggio basato sull'ID corretto del calendario senza conflitti di unicità
 async function salvaAssenzePartita() {
   if (!partitaSelezionataAssenze) return;
 
   const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
-  const targetId = partitaSelezionataAssenze.id; // ID ufficiale del calendario
+  const targetId = partitaSelezionataAssenze.id;
   const sondaggioId = partitaSelezionataAssenze.sondaggioId;
 
+  // Pulisci i vecchi record di assenza o verifica
+  let deleteQuery = db.from('presenze').delete();
+  if (sondaggioId) {
+    deleteQuery = deleteQuery.or(`id_partita.eq.${targetId},id_partita.eq.${sondaggioId}`);
+  } else {
+    deleteQuery = deleteQuery.eq('id_partita', targetId);
+  }
+  await deleteQuery;
+
+  // Inserisci le eventuali assenze/esclusioni selezionate
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
     const nome = row.getAttribute('data-giocatore-assente');
@@ -491,16 +499,6 @@ async function salvaAssenzePartita() {
     const stato = tipoAssenza === 'escluso' ? 'Escluso' : 'Assente';
 
     if (nome) {
-      // 1. Elimina preventivamente eventuali record duplicati (sia su targetId che su sondaggioId) per evitare il conflitto 409
-      let deleteQuery = db.from('presenze').delete().ilike('nome_utente', nome);
-      if (sondaggioId) {
-        deleteQuery = deleteQuery.or(`id_partita.eq.${targetId},id_partita.eq.${sondaggioId}`);
-      } else {
-        deleteQuery = deleteQuery.eq('id_partita', targetId);
-      }
-      await deleteQuery;
-
-      // 2. Inserisce il record pulito associato all'ID ufficiale del calendario
       await db.from('presenze').insert([{
         id_partita: targetId,
         nome_utente: nome,
@@ -509,6 +507,14 @@ async function salvaAssenzePartita() {
       }]);
     }
   }
+
+  // Inserisce il marcatore di sistema per confermare che la partita è stata registrata
+  await db.from('presenze').insert([{
+    id_partita: targetId,
+    nome_utente: '_SYSTEM_VERIFIED_',
+    stato: 'Verificato',
+    tipo_assenza: 'nessuna'
+  }]);
 
   mostraAlert("Assenze ed esclusioni salvate con successo!");
   chiudiDettaglioPartitaAssenze();
