@@ -369,13 +369,12 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
     presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato;
   });
 
-  // MODIFICA APPLICATA QUI:
-  // Filtra la rosa mostrando SOLO chi ha votato esplicitamente 'Assente' o 'Escluso'.
-  // I votanti 'Presente' e chi non ha ancora votato (undefined) vengono esclusi dalla lista.
+
+  // Mostra tutti i giocatori tranne quelli presenti alla partita
   const giocatoriNonPresenti = giocatori.filter(g => {
     const nome = g.nome_completo || g.nome;
     const stato = presenzeMap[nome.toLowerCase().trim()];
-    return stato === 'Assente' || stato === 'Escluso';
+    return stato !== 'Presente';
   });
 
   if (giocatoriNonPresenti.length === 0) {
