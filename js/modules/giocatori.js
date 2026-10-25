@@ -475,11 +475,13 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
 }
 
 // Salvataggio basato sull'ID corretto del calendario
+// Salvataggio basato sull'ID corretto del calendario senza conflitti di unicità
 async function salvaAssenzePartita() {
   if (!partitaSelezionataAssenze) return;
 
   const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
   const targetId = partitaSelezionataAssenze.id; // ID ufficiale del calendario
+  const sondaggioId = partitaSelezionataAssenze.sondaggioId;
 
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
@@ -489,31 +491,22 @@ async function salvaAssenzePartita() {
     const stato = tipoAssenza === 'escluso' ? 'Escluso' : 'Assente';
 
     if (nome) {
-      // Controlla se esiste già un record per questo giocatore legato al calendario o al vecchio sondaggio
-      let queryEsistente = db.from('presenze').select('*').ilike('nome_utente', nome);
-      if (partitaSelezionataAssenze.sondaggioId) {
-        queryEsistente = queryEsistente.or(`id_partita.eq.${targetId},id_partita.eq.${partitaSelezionataAssenze.sondaggioId}`);
+      // 1. Elimina preventivamente eventuali record duplicati (sia su targetId che su sondaggioId) per evitare il conflitto 409
+      let deleteQuery = db.from('presenze').delete().ilike('nome_utente', nome);
+      if (sondaggioId) {
+        deleteQuery = deleteQuery.or(`id_partita.eq.${targetId},id_partita.eq.${sondaggioId}`);
       } else {
-        queryEsistente = queryEsistente.eq('id_partita', targetId);
+        deleteQuery = deleteQuery.eq('id_partita', targetId);
       }
-      
-      const { data: esiste } = await queryEsistente;
+      await deleteQuery;
 
-      if (esiste && esiste.length > 0) {
-        // Aggiorna tutti i record trovati (sia calendario che eventuale sondaggio) per uniformarli all'id del calendario
-        for (const record of esiste) {
-          await db.from('presenze')
-            .update({ id_partita: targetId, stato: stato, tipo_assenza: tipoAssenza })
-            .eq('id', record.id);
-        }
-      } else {
-        await db.from('presenze').insert([{
-          id_partita: targetId,
-          nome_utente: nome,
-          stato: stato,
-          tipo_assenza: tipoAssenza
-        }]);
-      }
+      // 2. Inserisce il record pulito associato all'ID ufficiale del calendario
+      await db.from('presenze').insert([{
+        id_partita: targetId,
+        nome_utente: nome,
+        stato: stato,
+        tipo_assenza: tipoAssenza
+      }]);
     }
   }
 
