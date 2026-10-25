@@ -113,7 +113,7 @@ window.salvaFormazioneSuSupabase = async function() {
 window.apriSezioneFormazione = function() {
   if (typeof chiudiMenuUtente === 'function') chiudiMenuUtente();
   if (typeof switchTab === 'function') {
-    ['partite', 'classifica', 'sondaggi', 'messaggi'].forEach(t => {
+    ['partite', 'classifica', 'sondaggi', 'messaggi','giocatori', 'saldo'].forEach(t => {
       document.getElementById(`view-${t}`)?.classList.add('hidden');
     });
     document.getElementById('view-formazione')?.classList.remove('hidden');
