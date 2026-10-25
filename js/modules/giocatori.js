@@ -238,7 +238,6 @@ async function caricaTabellaGiocatoriInfo() {
   }
 }
 
-// Aggiornamento container partite assenze identico allo stile di saldo.js (caricaPartiteCassaSupabase)[cite: 98, 100]
 async function caricaPartiteAssenzeSupabase() {
   const container = document.getElementById('lista-partite-assenze');
   if (!container) return;
@@ -299,7 +298,7 @@ async function caricaPartiteAssenzeSupabase() {
     } else {
       if (!indexProssimaTrovata) {
         indexProssimaTrovata = true;
-        badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-black">Prossima</span>';
+        badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-black font-black">Prossima</span>';
         cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
         clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
       } else {
@@ -423,8 +422,8 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
     const numEsclusioniStoriche = storicoGiocatore.filter(pr => pr.stato === 'Escluso').length;
 
     const testoSelezionato = statoSelezionato === 'Escluso' 
-      ? `ESCLUSO (+1) (${numEsclusioniStoriche})` 
-      : `INDISPONIBILE (${numAssenzeStoriche})`;
+      ? `ESCLUSO (+1)` 
+      : `INDISPONIBILE (0)`;
 
     return `
       <div class="p-2.5 flex justify-between items-center text-xs gap-2 border-b border-slate-50 last:border-0" data-giocatore-assente="${escapeHtmlAttr(nome)}">
@@ -437,11 +436,11 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
             <svg class="w-3 h-3 text-slate-400 shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </div>
           <div id="options-stato-assenza-${idx}" class="custom-select-options hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden">
-            <div onclick="selezionaStatoAssenza(${idx}, 'Assente', 'INDISPONIBILE (${numAssenzeStoriche})')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition-colors">
-              INDISPONIBILE (${numAssenzeStoriche})
+            <div onclick="selezionaStatoAssenza(${idx}, 'Assente', 'INDISPONIBILE (0)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition-colors">
+              INDISPONIBILE (0)
             </div>
-            <div onclick="selezionaStatoAssenza(${idx}, 'Escluso', 'ESCLUSO (+1) (${numEsclusioniStoriche})')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
-              ESCLUSO (+1) (${numEsclusioniStoriche})
+            <div onclick="selezionaStatoAssenza(${idx}, 'Escluso', 'ESCLUSO (+1)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
+              ESCLUSO (+1)
             </div>
           </div>
           <input type="hidden" id="input-stato-assenza-${idx}" value="${statoSelezionato}">
