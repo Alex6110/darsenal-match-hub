@@ -20,12 +20,12 @@ async function caricaStatisticheUtente(nomeUtente) {
     const adesso = new Date();
 
     // 1. Carica calendario, presenze, eventi e sondaggi (partite) per allineare gli ID[cite: 98]
-   const [{ data: calendario }, { data: presenze }, { data: eventi }, { data: tuttePartiteSondaggio }, { data: assenzeSalvate }] = await Promise.all([
-    db.from('calendario_torneo').select('*').order('data_ora', { ascending: false }),
-    db.from('presenze').select('*'),
-    db.from('eventi_partita').select('*'),
-    db.from('partite').select('id, data_ora'),
-    db.from('assenze_partita').select('nome_utente, tipo')
+    const [{ data: calendario }, { data: presenze }, { data: eventi }, { data: tuttePartiteSondaggio }, { data: assenzeSalvate }] = await Promise.all([
+      db.from('calendario_torneo').select('*').order('data_ora', { ascending: false }),
+      db.from('presenze').select('*'),
+      db.from('eventi_partita').select('*'),
+      db.from('partite').select('id, data_ora'),
+      db.from('assenze_partita').select('nome_utente, tipo')
     ]);
 
     // Filtra solo le partite del torneo GIÀ GIOCATE dalla squadra[cite: 98]
@@ -339,20 +339,6 @@ function clickPartitaAssenze(id) {
   }
 }
 
-function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dataOra) {
-  if (giaSalvata) {
-    mostraConfirm(
-      "Partita già registrata",
-      "Sei sicuro di voler accedere per visualizzare o modificare le assenze e le esclusioni registrate?",
-      function() {
-        apriDettaglioPartitaAssenze(partitaId, avversario, dataOra);
-      }
-    );
-  } else {
-    apriDettaglioPartitaAssenze(partitaId, avversario, dataOra);
-  }
-}
-
 // ---------------------------------------------------------
 // DETTAGLIO PARTITA
 // ---------------------------------------------------------
@@ -482,18 +468,4 @@ function chiudiDettaglioPartitaAssenze() {
   document.getElementById('vista-elenco-partite-assenze')?.classList.remove('hidden');
 }
 
-// Funzione per gestire la selezione del menu custom in stile sito
-window.selezionaStatoAssenza = function(idx, valore, testo) {
-  const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
-  if (inputEl) inputEl.value = valore;
-
-  const displayEl = document.getElementById(`display-stato-assenza-${idx}`);
-  if (displayEl) {
-    const span = displayEl.querySelector('span');
-    if (span) span.innerText = testo;
-  }
-
-  const optionsContainer = document.getElementById(`options-stato-assenza-${idx}`);
-  if (optionsContainer) optionsContainer.classList.add('hidden');
-};
 
