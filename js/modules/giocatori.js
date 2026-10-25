@@ -42,8 +42,8 @@ async function caricaStatisticheUtente(nomeUtente) {
 
     // Presenze effettive (nominatore) / Partite totali giocate dalla squadra (denominatore)[cite: 98]
     const presenzeTotali = presenzeGiocatore.filter(p => p.stato === 'Presente').length;
-    const esclusioniTotali = presenzeGiocatore.filter(p => p.stato === 'Escluso').length;
-    const assenzeTotali = Math.max(0, numPartiteSquadra - presenzeTotali);
+    const esclusioniTotali = presenzeGiocatore.filter(p => p.tipo_assenza === 'escluso' || p.stato === 'Escluso').length;
+    const assenzeTotali = presenzeGiocatore.filter(p => p.tipo_assenza === 'non_disponibile' || p.stato === 'Assente').length;
 
     // Ultima giocata[cite: 98]
     const presenzeEffettive = presenzeGiocatore.filter(p => p.stato === 'Presente');
@@ -183,7 +183,7 @@ async function caricaTabellaGiocatoriInfo() {
 
       const pres = pList.filter(p => p.stato === 'Presente').length;
       const assenzeTotali = Math.max(0, numPartiteSquadra - pres);
-      const esclusioni = pList.filter(p => p.stato === 'Escluso').length;
+      const esclusioni = pList.filter(p => p.tipo_assenza === 'escluso' || p.stato === 'Escluso').length;
 
       const presenzeFormatte = `${pres} / ${numPartiteSquadra}`;
 
@@ -367,18 +367,8 @@ function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dat
 
 // Mostra il dettaglio con i giocatori assenti/esclusi e il menu a tendina personalizzato in stile sito
 async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
-  // 1. Trova l'eventuale ID del sondaggio corrispondente nella tabella partite per allineare gli ID
-  let sondaggioId = null;
-  const { data: tuttePartiteSondaggio } = await db.from('partite').select('id, data_ora, squadra_avversaria');
-  if (tuttePartiteSondaggio) {
-    const sondaggioTrovato = tuttePartiteSondaggio.find(s => 
-      (dataOra && s.data_ora === dataOra) || 
-      (avversario && (s.squadra_avversaria || '').toLowerCase().includes(avversario.toLowerCase()))
-    );
-    if (sondaggioTrovato) sondaggioId = sondaggioTrovato.id;
-  }
-
-  partitaSelezionataAssenze = { id: partitaId, sondaggioId, avversario, dataOra };
+  // Usiamo direttamente l'ID della partita del calendario
+  partitaSelezionataAssenze = { id: partitaId, avversario, dataOra };
 
   document.getElementById('vista-elenco-partite-assenze').classList.add('hidden');
   document.getElementById('vista-dettaglio-partita-assenze').classList.remove('hidden');
@@ -394,36 +384,32 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   const { data: dbG } = await db.from('giocatori').select('*');
   if (dbG && dbG.length > 0) giocatori = dbG;
 
-  // 2. Raccoglie tutti gli ID possibili per intercettare correttamente le presenze ovunque siano salvate
-  const idsPossibili = [String(partitaId)];
-  if (sondaggioId) idsPossibili.push(String(sondaggioId));
-
-  const { data: tutteLePresenze } = await db.from('presenze').select('*');
-
-  const presenzeMatch = (tutteLePresenze || []).filter(pr => {
-    const mId = String(pr.id_partita || pr.id_sondaggio || pr.partita_id);
-    return idsPossibili.includes(mId);
-  });
+  // Recupera le presenze salvate per questa partita specifica
+  const { data: presenzeMatch } = await db.from('presenze')
+    .select('*')
+    .eq('id_partita', partitaId);
 
   const presenzeMap = {};
-  presenzeMatch.forEach(pr => {
-    presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato;
+  (presenzeMatch || []).forEach(pr => {
+    presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = {
+      stato: pr.stato,
+      tipo_assenza: pr.tipo_assenza || 'non_disponibile'
+    };
   });
 
-  // 3. Logica inversa: mostra tutti i giocatori tranne chi ha votato 'Presente'
+  // Mostra tutti i giocatori tranne chi ha votato 'Presente'
   const giocatoriNonPresenti = giocatori.filter(g => {
     const nome = g.nome_completo || g.nome;
-    const stato = presenzeMap[nome.toLowerCase().trim()];
-    return stato !== 'Presente';
+    const pData = presenzeMap[nome.toLowerCase().trim()];
+    return !pData || pData.stato !== 'Presente';
   });
 
-  // Contatore dei giocatori assenti nell'intestazione (rettangolo azzurro)
   let headerContatore = document.getElementById('assenze-num-assenti');
   if (!headerContatore) {
-    const headerContainer = document.querySelector('#vista-dettaglio-partita-assenze .bg-white.p-4.rounded-2xl, #vista-dettaglio-partita-assenze div > .flex.justify-between') || document.getElementById('assenze-titolo-partita').parentElement;
+    const headerContainer = document.querySelector('#vista-dettaglio-partita-assenze .bg-white.p-4.rounded-2xl') || document.getElementById('assenze-titolo-partita').parentElement;
     if (headerContainer) {
       const badgeDiv = document.createElement('div');
-      badgeDiv.className = "text-right";
+      badgeDiv.className = "text-right mt-1";
       badgeDiv.innerHTML = `<span id="assenze-num-assenti" class="text-[10px] bg-slate-100 text-slate-600 px-3 py-1 rounded-full font-black">${giocatoriNonPresenti.length} Assenti</span>`;
       headerContainer.appendChild(badgeDiv);
     }
@@ -439,38 +425,30 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   container.innerHTML = giocatoriNonPresenti.map((g, idx) => {
     const nome = g.nome_completo || g.nome;
     const nomeNorm = nome.toLowerCase().trim();
-    const statoCorrente = presenzeMap[nomeNorm];
-    const isEscluso = statoCorrente === 'Escluso';
-    const statoSelezionato = isEscluso ? 'Escluso' : 'Assente';
+    const pData = presenzeMap[nomeNorm] || { tipo_assenza: 'non_disponibile' };
+    const isEscluso = pData.tipo_assenza === 'escluso';
 
-    // Calcolo storico assenze/esclusioni
-    const storicoGiocatore = (tutteLePresenze || []).filter(pr => (pr.nome_utente || '').toLowerCase().trim() === nomeNorm);
-    const numAssenzeStoriche = storicoGiocatore.filter(pr => pr.stato === 'Assente').length;
-    const numEsclusioniStoriche = storicoGiocatore.filter(pr => pr.stato === 'Escluso').length;
-
-    const testoSelezionato = statoSelezionato === 'Escluso' 
-      ? `ESCLUSO (+1)` 
-      : `INDISPONIBILE (0)`;
+    const tipoSelezionato = isEscluso ? 'escluso' : 'non_disponibile';
+    const testoSelezionato = isEscluso ? `ESCLUSO (+1)` : `INDISPONIBILE (0)`;
 
     return `
       <div class="p-2.5 flex justify-between items-center text-xs gap-2 border-b border-slate-50 last:border-0" data-giocatore-assente="${escapeHtmlAttr(nome)}">
         <span class="font-bold text-slate-700 truncate w-[45%]" style="font-size: 11px;">${nome}</span>
         
-        <!-- Menu a tendina custom in stile sito -->
         <div class="custom-select-wrapper relative w-[55%]">
           <div onclick="toggleCustomSelect('stato-assenza-${idx}')" id="display-stato-assenza-${idx}" class="p-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 cursor-pointer flex justify-between items-center">
             <span class="truncate">${testoSelezionato}</span>
             <svg class="w-3 h-3 text-slate-400 shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </div>
           <div id="options-stato-assenza-${idx}" class="custom-select-options hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 overflow-hidden">
-            <div onclick="selezionaStatoAssenza(${idx}, 'Assente', 'INDISPONIBILE (0)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition-colors">
+            <div onclick="selezionaStatoAssenza(${idx}, 'non_disponibile', 'INDISPONIBILE (0)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer border-b border-slate-50 transition-colors">
               INDISPONIBILE (0)
             </div>
-            <div onclick="selezionaStatoAssenza(${idx}, 'Escluso', 'ESCLUSO (+1)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
+            <div onclick="selezionaStatoAssenza(${idx}, 'escluso', 'ESCLUSO (+1)')" class="p-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors">
               ESCLUSO (+1)
             </div>
           </div>
-          <input type="hidden" id="input-stato-assenza-${idx}" value="${statoSelezionato}">
+          <input type="hidden" id="input-stato-assenza-${idx}" value="${tipoSelezionato}">
         </div>
       </div>
     `;
@@ -497,13 +475,15 @@ async function salvaAssenzePartita() {
   if (!partitaSelezionataAssenze) return;
 
   const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
-  const targetId = partitaSelezionataAssenze.sondaggioId || partitaSelezionataAssenze.id;
+  // Usiamo esclusivamente l'ID della partita del calendario per evitare notifiche di vecchi sondaggi
+  const targetId = partitaSelezionataAssenze.id;
 
   for (let idx = 0; idx < rows.length; idx++) {
     const row = rows[idx];
     const nome = row.getAttribute('data-giocatore-assente');
     const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
-    const nuovoStato = inputEl ? inputEl.value : 'Assente';
+    const tipoAssenza = inputEl ? inputEl.value : 'non_disponibile'; // 'non_disponibile' o 'escluso'
+    const stato = tipoAssenza === 'escluso' ? 'Escluso' : 'Assente';
 
     if (nome) {
       const { data: esiste } = await db.from('presenze')
@@ -513,14 +493,15 @@ async function salvaAssenzePartita() {
 
       if (esiste && esiste.length > 0) {
         await db.from('presenze')
-          .update({ stato: nuovoStato })
+          .update({ stato: stato, tipo_assenza: tipoAssenza })
           .eq('id_partita', targetId)
           .ilike('nome_utente', nome);
       } else {
         await db.from('presenze').insert([{
           id_partita: targetId,
           nome_utente: nome,
-          stato: nuovoStato
+          stato: stato,
+          tipo_assenza: tipoAssenza
         }]);
       }
     }
@@ -529,6 +510,7 @@ async function salvaAssenzePartita() {
   mostraAlert("Assenze ed esclusioni salvate con successo!");
   chiudiDettaglioPartitaAssenze();
   caricaPartiteAssenzeSupabase();
+  caricaTabellaGiocatoriInfo(); // Aggiorna subito la tabella info giocatori
 }
 
 function chiudiDettaglioPartitaAssenze() {
