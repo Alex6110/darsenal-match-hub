@@ -366,9 +366,20 @@ function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dat
 }
 
 // Mostra il dettaglio con i giocatori assenti/esclusi e il menu a tendina personalizzato in stile sito
+// Mostra il dettaglio con i giocatori assenti/esclusi e il menu a tendina personalizzato in stile sito
 async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
-  // Usiamo direttamente l'ID della partita del calendario
-  partitaSelezionataAssenze = { id: partitaId, avversario, dataOra };
+  // Cerchiamo subito l'eventuale ID del sondaggio collegato per data/avversario
+  let sondaggioId = null;
+  const { data: tuttePartiteSondaggio } = await db.from('partite').select('id, data_ora, squadra_avversaria');
+  if (tuttePartiteSondaggio) {
+    const sondaggioTrovato = tuttePartiteSondaggio.find(s => 
+      (dataOra && s.data_ora === dataOra) || 
+      (avversario && (s.squadra_avversaria || '').toLowerCase().includes(avversario.toLowerCase()))
+    );
+    if (sondaggioTrovato) sondaggioId = String(sondaggioTrovato.id);
+  }
+
+  partitaSelezionataAssenze = { id: partitaId, sondaggioId, avversario, dataOra };
 
   document.getElementById('vista-elenco-partite-assenze').classList.add('hidden');
   document.getElementById('vista-dettaglio-partita-assenze').classList.remove('hidden');
@@ -384,17 +395,25 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   const { data: dbG } = await db.from('giocatori').select('*');
   if (dbG && dbG.length > 0) giocatori = dbG;
 
-  // Recupera le presenze salvate per questa partita specifica
-  const { data: presenzeMatch } = await db.from('presenze')
-    .select('*')
-    .eq('id_partita', partitaId);
+  // Recupera le presenze controllando sia l'ID calendario che l'ID sondaggio
+  let queryPresenze = db.from('presenze').select('*');
+  if (sondaggioId) {
+    queryPresenze = queryPresenze.or(`id_partita.eq.${partitaId},id_partita.eq.${sondaggioId}`);
+  } else {
+    queryPresenze = queryPresenze.eq('id_partita', partitaId);
+  }
+  const { data: presenzeMatch } = await queryPresenze;
 
   const presenzeMap = {};
   (presenzeMatch || []).forEach(pr => {
-    presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = {
-      stato: pr.stato,
-      tipo_assenza: pr.tipo_assenza || 'non_disponibile'
-    };
+    const nomeNormKey = (pr.nome_utente || '').toLowerCase().trim();
+    // Diamo priorità a record già valorizzati correttamente o presenti
+    if (!presenzeMap[nomeNormKey] || pr.stato === 'Presente') {
+      presenzeMap[nomeNormKey] = {
+        stato: pr.stato,
+        tipo_assenza: pr.tipo_assenza || 'non_disponibile'
+      };
+    }
   });
 
   // Mostra tutti i giocatori tranne chi ha votato 'Presente'
@@ -426,7 +445,7 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
     const nome = g.nome_completo || g.nome;
     const nomeNorm = nome.toLowerCase().trim();
     const pData = presenzeMap[nomeNorm] || { tipo_assenza: 'non_disponibile' };
-    const isEscluso = pData.tipo_assenza === 'escluso';
+    const isEscluso = pData.tipo_assenza === 'escluso' || pData.stato === 'Escluso';
 
     const tipoSelezionato = isEscluso ? 'escluso' : 'non_disponibile';
     const testoSelezionato = isEscluso ? `ESCLUSO (+1)` : `INDISPONIBILE (0)`;
@@ -455,6 +474,55 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   }).join('');
 }
 
+// Salvataggio basato sull'ID corretto del calendario
+async function salvaAssenzePartita() {
+  if (!partitaSelezionataAssenze) return;
+
+  const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
+  const targetId = partitaSelezionataAssenze.id; // ID ufficiale del calendario
+
+  for (let idx = 0; idx < rows.length; idx++) {
+    const row = rows[idx];
+    const nome = row.getAttribute('data-giocatore-assente');
+    const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
+    const tipoAssenza = inputEl ? inputEl.value : 'non_disponibile'; 
+    const stato = tipoAssenza === 'escluso' ? 'Escluso' : 'Assente';
+
+    if (nome) {
+      // Controlla se esiste già un record per questo giocatore legato al calendario o al vecchio sondaggio
+      let queryEsistente = db.from('presenze').select('*').ilike('nome_utente', nome);
+      if (partitaSelezionataAssenze.sondaggioId) {
+        queryEsistente = queryEsistente.or(`id_partita.eq.${targetId},id_partita.eq.${partitaSelezionataAssenze.sondaggioId}`);
+      } else {
+        queryEsistente = queryEsistente.eq('id_partita', targetId);
+      }
+      
+      const { data: esiste } = await queryEsistente;
+
+      if (esiste && esiste.length > 0) {
+        // Aggiorna tutti i record trovati (sia calendario che eventuale sondaggio) per uniformarli all'id del calendario
+        for (const record of esiste) {
+          await db.from('presenze')
+            .update({ id_partita: targetId, stato: stato, tipo_assenza: tipoAssenza })
+            .eq('id', record.id);
+        }
+      } else {
+        await db.from('presenze').insert([{
+          id_partita: targetId,
+          nome_utente: nome,
+          stato: stato,
+          tipo_assenza: tipoAssenza
+        }]);
+      }
+    }
+  }
+
+  mostraAlert("Assenze ed esclusioni salvate con successo!");
+  chiudiDettaglioPartitaAssenze();
+  caricaPartiteAssenzeSupabase();
+  caricaTabellaGiocatoriInfo(); 
+}
+
 // Funzione per gestire la selezione del menu custom in stile sito
 window.selezionaStatoAssenza = function(idx, valore, testo) {
   const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
@@ -470,48 +538,6 @@ window.selezionaStatoAssenza = function(idx, valore, testo) {
   if (optionsContainer) optionsContainer.classList.add('hidden');
 };
 
-// Salvataggio basato sull'ID corretto (sondaggio o calendario)
-async function salvaAssenzePartita() {
-  if (!partitaSelezionataAssenze) return;
-
-  const rows = document.querySelectorAll('#assenze-lista-giocatori > div');
-  // Usiamo esclusivamente l'ID della partita del calendario per evitare notifiche di vecchi sondaggi
-  const targetId = partitaSelezionataAssenze.id;
-
-  for (let idx = 0; idx < rows.length; idx++) {
-    const row = rows[idx];
-    const nome = row.getAttribute('data-giocatore-assente');
-    const inputEl = document.getElementById(`input-stato-assenza-${idx}`);
-    const tipoAssenza = inputEl ? inputEl.value : 'non_disponibile'; // 'non_disponibile' o 'escluso'
-    const stato = tipoAssenza === 'escluso' ? 'Escluso' : 'Assente';
-
-    if (nome) {
-      const { data: esiste } = await db.from('presenze')
-        .select('*')
-        .eq('id_partita', targetId)
-        .ilike('nome_utente', nome);
-
-      if (esiste && esiste.length > 0) {
-        await db.from('presenze')
-          .update({ stato: stato, tipo_assenza: tipoAssenza })
-          .eq('id_partita', targetId)
-          .ilike('nome_utente', nome);
-      } else {
-        await db.from('presenze').insert([{
-          id_partita: targetId,
-          nome_utente: nome,
-          stato: stato,
-          tipo_assenza: tipoAssenza
-        }]);
-      }
-    }
-  }
-
-  mostraAlert("Assenze ed esclusioni salvate con successo!");
-  chiudiDettaglioPartitaAssenze();
-  caricaPartiteAssenzeSupabase();
-  caricaTabellaGiocatoriInfo(); // Aggiorna subito la tabella info giocatori
-}
 
 function chiudiDettaglioPartitaAssenze() {
   document.getElementById('vista-dettaglio-partita-assenze').classList.add('hidden');
