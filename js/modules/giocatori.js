@@ -1,6 +1,6 @@
 let partitaSelezionataAssenze = null;
 
-// Carica e calcola le statistiche personali per il menu laterale dell'utente
+// Carica e calcola le statistiche personali per il menu laterale dell'utente[cite: 98]
 async function caricaStatisticheUtente(nomeUtente) {
   if (!nomeUtente) return;
 
@@ -9,7 +9,7 @@ async function caricaStatisticheUtente(nomeUtente) {
   try {
     const adesso = new Date();
 
-    // 1. Carica calendario, presenze, eventi e sondaggi (partite) per allineare gli ID
+    // 1. Carica calendario, presenze, eventi e sondaggi (partite) per allineare gli ID[cite: 98]
     const [{ data: calendario }, { data: presenze }, { data: eventi }, { data: tuttePartiteSondaggio }] = await Promise.all([
       db.from('calendario_torneo').select('*').order('data_ora', { ascending: false }),
       db.from('presenze').select('*'),
@@ -17,14 +17,14 @@ async function caricaStatisticheUtente(nomeUtente) {
       db.from('partite').select('id, data_ora')
     ]);
 
-    // Filtra solo le partite del torneo GIÀ GIOCATE dalla squadra
+    // Filtra solo le partite del torneo GIÀ GIOCATE dalla squadra[cite: 98]
     const partiteGiocateSquadra = (calendario || []).filter(p => 
       p.completata || p.risultato || new Date(p.data_ora) <= adesso
     );
 
     const numPartiteSquadra = partiteGiocateSquadra.length;
     
-    // Mappa gli ID validi (sia id di calendario_torneo che id di partite/sondaggi collegati per data)
+    // Mappa gli ID validi (sia id di calendario_torneo che id di partite/sondaggi collegati per data)[cite: 98]
     const validMatchIds = new Set();
     partiteGiocateSquadra.forEach(p => {
       validMatchIds.add(String(p.id));
@@ -34,18 +34,18 @@ async function caricaStatisticheUtente(nomeUtente) {
       }
     });
 
-    // Filtra le presenze del giocatore per le partite giocate
+    // Filtra le presenze del giocatore per le partite giocate[cite: 98]
     const presenzeGiocatore = (presenze || []).filter(p => {
       const matchId = String(p.id_partita || p.id_sondaggio || p.partita_id);
       return (p.nome_utente || '').toLowerCase().trim() === nomeNorm && validMatchIds.has(matchId);
     });
 
-    // Presenze effettive (nominatore) / Partite totali giocate dalla squadra (denominatore)
+    // Presenze effettive (nominatore) / Partite totali giocate dalla squadra (denominatore)[cite: 98]
     const presenzeTotali = presenzeGiocatore.filter(p => p.stato === 'Presente').length;
     const esclusioniTotali = presenzeGiocatore.filter(p => p.stato === 'Escluso').length;
     const assenzeTotali = Math.max(0, numPartiteSquadra - presenzeTotali);
 
-    // Ultima giocata
+    // Ultima giocata[cite: 98]
     const presenzeEffettive = presenzeGiocatore.filter(p => p.stato === 'Presente');
     let ultimaGiocataStr = '-';
 
@@ -67,7 +67,7 @@ async function caricaStatisticheUtente(nomeUtente) {
       }
     }
 
-    // Gol e Cartellini
+    // Gol e Cartellini[cite: 98]
     const eventiGiocatore = (eventi || []).filter(e => 
       (e.nome_utente || '').toLowerCase().trim() === nomeNorm && validMatchIds.has(String(e.id_partita))
     );
@@ -76,7 +76,7 @@ async function caricaStatisticheUtente(nomeUtente) {
     const gialli = eventiGiocatore.filter(e => e.tipo === 'giallo').length;
     const rossi = eventiGiocatore.filter(e => e.tipo === 'rosso').length;
 
-    // Aggiorna UI del menu laterale (Presenze Totali formato Nominatore / Denominatore)
+    // Aggiorna UI del menu laterale (Presenze Totali formato Nominatore / Denominatore)[cite: 98]
     if (document.getElementById('stat-presenze')) document.getElementById('stat-presenze').innerText = `${presenzeTotali} / ${numPartiteSquadra}`;
     if (document.getElementById('stat-ultima')) document.getElementById('stat-ultima').innerText = ultimaGiocataStr;
     if (document.getElementById('stat-esclusioni')) document.getElementById('stat-esclusioni').innerText = `${esclusioniTotali} / ${assenzeTotali}`;
@@ -89,12 +89,12 @@ async function caricaStatisticheUtente(nomeUtente) {
   }
 }
 
-// Apre la sezione Giocatori come pagina principale (stile saldo.js)
+// Apre la sezione Giocatori come pagina principale (stile saldo.js)[cite: 98, 100]
 function apriSezioneGiocatori() {
   switchTab('giocatori');
   switchTabGiocatori('info');
   
-  // Mostra o nasconde la tab assenze in base ai permessi admin
+  // Mostra o nasconde la tab assenze in base ai permessi admin[cite: 98]
   const btnTabAssenze = document.getElementById('btn-tab-giocatori-assenze');
   if (btnTabAssenze) {
     if (typeof isAdmin !== 'undefined' && isAdmin) {
@@ -105,7 +105,7 @@ function apriSezioneGiocatori() {
   }
 }
 
-// Gestione dei tab all'interno della pagina Giocatori / Assenze
+// Gestione dei tab all'interno della pagina Giocatori / Assenze[cite: 98]
 function switchTabGiocatori(tab) {
   if (tab === 'assenze' && typeof isAdmin !== 'undefined' && !isAdmin) {
     tab = 'info';
@@ -131,7 +131,7 @@ function switchTabGiocatori(tab) {
   }
 }
 
-// Rinomina la funzione di caricamento tabella rimuovendo i riferimenti alla modale
+// Rinomina la funzione di caricamento tabella rimuovendo i riferimenti alla modale[cite: 98]
 async function caricaTabellaGiocatoriInfo() {
   const tbody = document.getElementById('admin-giocatori-tbody');
   if (!tbody) return;
@@ -174,7 +174,6 @@ async function caricaTabellaGiocatoriInfo() {
       const nomeProprio = partiNome.slice(0, partiNome.length - 1).join(' ');
       const nomeNorm = nomeCompleto.toLowerCase().trim();
 
-      // Alternanza colori righe tabella (pari bianco, dispari grigio chiaro)
       const bgRowClass = idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/80';
 
       const pList = (presenze || []).filter(p => {
@@ -239,14 +238,18 @@ async function caricaTabellaGiocatoriInfo() {
   }
 }
 
-// Aggiornamento container partite assenze per puntare a 'lista-partite-assenze'
+// Aggiornamento container partite assenze identico allo stile di saldo.js (caricaPartiteCassaSupabase)[cite: 98, 100]
 async function caricaPartiteAssenzeSupabase() {
   const container = document.getElementById('lista-partite-assenze');
   if (!container) return;
 
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-6">Caricamento partite...</div>`;
 
-  const { data: partite, error } = await db.from('calendario_torneo').select('*').order('data_ora', { ascending: true });
+  const [{ data: partite, error }, { data: tuttePresenze }] = await Promise.all([
+    db.from('calendario_torneo').select('*').order('data_ora', { ascending: true }),
+    db.from('presenze').select('id_partita, stato')
+  ]);
+
   if (error || !partite) {
     container.innerHTML = `<div class="text-center text-xs text-rose-500 py-4">Errore caricamento calendario.</div>`;
     return;
@@ -263,68 +266,80 @@ async function caricaPartiteAssenzeSupabase() {
     return;
   }
 
+  const matchIdsSalvati = new Set(
+    (tuttePresenze || [])
+      .filter(pr => pr.stato === 'Assente' || pr.stato === 'Escluso')
+      .map(pr => String(pr.id_partita))
+  );
+
   const adesso = new Date();
+  let indexProssimaTrovata = false;
 
-  // Trova l'indice della prossima partita in calendario
-  let indiceProssima = partiteDarsenal.findIndex(p => {
+  container.innerHTML = partiteDarsenal.map(p => {
     const d = new Date(p.data_ora);
-    return !p.completata && !p.risultato && d > adesso;
-  });
-
-  if (indiceProssima === -1) indiceProssima = partiteDarsenal.length;
-
-  container.innerHTML = partiteDarsenal.map((p, index) => {
-    const d = new Date(p.data_ora);
-    const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const dataFormatted = !isNaN(d) ? d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Data ignota';
     const oraFormatted = !isNaN(d) ? d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+
+    const isPassata = d <= adesso;
     const avversario = p.squadra_casa.toLowerCase().includes('darsenal') ? p.squadra_trasferta : p.squadra_casa;
+    const giaSalvata = matchIdsSalvati.has(String(p.id));
 
-    const isPassata = p.completata || p.risultato || d <= adesso;
-    const isProssima = (index === indiceProssima);
+    let badgeStato = '';
+    let cardStyle = '';
+    let clickAction = '';
 
-    let cardClass = "";
-    let badgeHtml = "";
-    let clickAction = "";
-
-    if (isPassata) {
-      // Partita già giocata: grigiata ma modificabile con conferma
-      cardClass = "p-4 rounded-2xl border bg-slate-50 opacity-70 border-slate-200 shadow-sm cursor-pointer transition-all";
-      badgeHtml = `<span class="text-[9px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-black">Giocata (Modificabile)</span>`;
-      clickAction = `cliccaPartitaPassataAssenze('${p.id}', '${escapeHtmlAttr(avversario)}', '${p.data_ora}')`;
-    } else if (isProssima) {
-      // Prossima partita da giocare: attiva
-      cardClass = "p-4 rounded-2xl border bg-white border-burgundy shadow-md cursor-pointer transition-all hover:scale-[1.01]";
-      badgeHtml = `<span class="text-[9px] bg-burgundy text-white px-2.5 py-0.5 rounded-full font-black">Prossima Gara</span>`;
-      clickAction = `apriDettaglioPartitaAssenze('${p.id}', '${escapeHtmlAttr(avversario)}', '${p.data_ora}')`;
+    if (giaSalvata) {
+      badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-600 px-2.5 py-0.5 rounded-full font-bold">Giocata e Salvata</span>';
+      cardStyle = 'bg-slate-50 border-slate-200 opacity-90 cursor-pointer';
+      clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', true, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
+    } else if (isPassata) {
+      badgeStato = '<span class="text-[9px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-black">Da Registrare</span>';
+      cardStyle = 'bg-white border-burgundy border-2 shadow-md cursor-pointer';
+      clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
     } else {
-      // Partite future successive alla prossima: grigiate diversamente e non modificabili
-      cardClass = "p-4 rounded-2xl border bg-slate-100 opacity-40 border-slate-200 shadow-xs cursor-not-allowed";
-      badgeHtml = `<span class="text-[9px] bg-slate-300 text-slate-700 px-2.5 py-0.5 rounded-full font-black">Non Ancora Modificabile</span>`;
-      clickAction = `mostraAlert("Questa partita non è la prossima in calendario, non è ancora possibile modificare le assenze.")`;
+      if (!indexProssimaTrovata) {
+        indexProssimaTrovata = true;
+        badgeStato = '<span class="text-[9px] bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-black">Prossima</span>';
+        cardStyle = 'bg-white border-slate-200 shadow-sm cursor-pointer';
+        clickAction = `onclick="confermaEDettaglioPartitaAssenze('${p.id}', false, '${escapeHtmlAttr(avversario)}', '${p.data_ora}')"`;
+      } else {
+        badgeStato = '<span class="text-[9px] bg-slate-200 text-slate-500 px-2.5 py-0.5 rounded-full font-bold">Da giocare</span>';
+        cardStyle = 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed';
+        clickAction = '';
+      }
     }
 
     return `
-      <div onclick="${clickAction}" class="${cardClass}">
+      <div ${clickAction} class="p-4 rounded-2xl border ${cardStyle} transition-all hover:scale-[1.01]">
         <div class="flex justify-between items-center">
           <div>
             <p class="font-black text-xs text-slate-800">Darsenal vs ${avversario}</p>
-            <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} alle ${oraFormatted}</p>
+            <p class="text-[10px] text-slate-400 font-bold">${dataFormatted} alle ${oraFormatted} ${p.giornata ? `- ${p.giornata}` : ''}</p>
           </div>
-          ${badgeHtml}
+          <div class="flex items-center gap-2">
+            ${badgeStato}
+          </div>
         </div>
       </div>
     `;
   }).join('');
 }
 
-async function cliccaPartitaPassataAssenze(partitaId, avversario, dataOra) {
-  const confermato = await mostraConfirm("Questa partita è già stata giocata. Vuoi modificare le assenze e le esclusioni registrate?");
-  if (confermato) {
+function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dataOra) {
+  if (giaSalvata) {
+    mostraConfirm(
+      "Partita già registrata",
+      "Sei sicuro di voler accedere per visualizzare o modificare le assenze e le esclusioni registrate?",
+      function() {
+        apriDettaglioPartitaAssenze(partitaId, avversario, dataOra);
+      }
+    );
+  } else {
     apriDettaglioPartitaAssenze(partitaId, avversario, dataOra);
   }
 }
 
-// Mostra il dettaglio con i giocatori non presenti e i selettori Indisponibile / Escluso
+// Mostra il dettaglio con i giocatori non presenti e i selettori Indisponibile / Escluso[cite: 98]
 async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   partitaSelezionataAssenze = { id: partitaId, avversario, dataOra };
 
@@ -338,19 +353,16 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   const container = document.getElementById('assenze-lista-giocatori');
   container.innerHTML = `<div class="text-center text-xs text-slate-400 py-4">Caricamento giocatori...</div>`;
 
-  // Carica tutti i giocatori della rosa
   let giocatori = typeof GIOCATORI_MOCK !== 'undefined' ? GIOCATORI_MOCK : [];
   const { data: dbG } = await db.from('giocatori').select('*');
   if (dbG && dbG.length > 0) giocatori = dbG;
 
-  // Carica le presenze registrate per questa partita
   const { data: presenze } = await db.from('presenze').select('*').eq('id_partita', partitaId);
   const presenzeMap = {};
   (presenze || []).forEach(pr => {
-    presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato; // 'Presente', 'Assente', 'Escluso'
+    presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato;
   });
 
-  // Filtra SOLO i giocatori che NON sono presenti (quindi Assenti o Esclusi o non registrati)
   const giocatoriNonPresenti = giocatori.filter(g => {
     const nome = g.nome_completo || g.nome;
     const stato = presenzeMap[nome.toLowerCase().trim()];
@@ -365,7 +377,6 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   container.innerHTML = giocatoriNonPresenti.map((g, idx) => {
     const nome = g.nome_completo || g.nome;
     const statoCorrente = presenzeMap[nome.toLowerCase().trim()];
-    // Se lo stato salvato è 'Escluso' usiamo quello, altrimenti default 'Assente' (Indisponibile)
     const isEscluso = statoCorrente === 'Escluso';
 
     return `
@@ -385,7 +396,7 @@ function chiudiDettaglioPartitaAssenze() {
   document.getElementById('vista-elenco-partite-assenze').classList.remove('hidden');
 }
 
-// Salva le decisioni e aggiorna il database e le statistiche esclusioni
+// Salva le decisioni e aggiorna il database e le statistiche esclusioni[cite: 98]
 async function salvaAssenzePartita() {
   if (!partitaSelezionataAssenze) return;
 
@@ -396,10 +407,9 @@ async function salvaAssenzePartita() {
     const row = rows[idx];
     const nome = row.getAttribute('data-giocatore-assente');
     const selectEl = document.getElementById(`select-assenza-${idx}`);
-    const nuovoStato = selectEl ? selectEl.value : 'Assente'; // 'Escluso' o 'Assente'
+    const nuovoStato = selectEl ? selectEl.value : 'Assente';
 
     if (nome) {
-      // Verifica se esiste già un record presenze per questo utente e partita
       const { data: esiste } = await db.from('presenze')
         .select('*')
         .eq('id_partita', partiteId)
@@ -425,7 +435,7 @@ async function salvaAssenzePartita() {
   caricaPartiteAssenzeSupabase();
 }
 
-// Helper di sicurezza per attributi HTML
+// Helper di sicurezza per attributi HTML[cite: 98]
 function escapeHtmlAttr(str) {
   if (!str) return '';
   return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
