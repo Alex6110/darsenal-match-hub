@@ -340,6 +340,7 @@ function confermaEDettaglioPartitaAssenze(partitaId, giaSalvata, avversario, dat
 }
 
 // Mostra il dettaglio con i giocatori non presenti e i selettori Indisponibile / Escluso[cite: 98]
+// Mostra il dettaglio con i giocatori assenti/esclusi (escludendo chi ha votato Presente e chi non ha ancora votato)
 async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
   partitaSelezionataAssenze = { id: partitaId, avversario, dataOra };
 
@@ -368,16 +369,17 @@ async function apriDettaglioPartitaAssenze(partitaId, avversario, dataOra) {
     presenzeMap[(pr.nome_utente || '').toLowerCase().trim()] = pr.stato;
   });
 
-  // Mostra tutti i giocatori della rosa che NON sono segnati come 'Presente' 
-  // (includendo chi è assente, escluso o non ha ancora votato, così la lista non è mai vuota)
+  // MODIFICA APPLICATA QUI:
+  // Filtra la rosa mostrando SOLO chi ha votato esplicitamente 'Assente' o 'Escluso'.
+  // I votanti 'Presente' e chi non ha ancora votato (undefined) vengono esclusi dalla lista.
   const giocatoriNonPresenti = giocatori.filter(g => {
     const nome = g.nome_completo || g.nome;
     const stato = presenzeMap[nome.toLowerCase().trim()];
-    return stato !== 'Presente';
+    return stato === 'Assente' || stato === 'Escluso';
   });
 
   if (giocatoriNonPresenti.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Tutti i giocatori risultano presenti per questa partita.</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 font-medium">Nessun giocatore assente o escluso registrato per questa partita.</div>`;
     return;
   }
 
