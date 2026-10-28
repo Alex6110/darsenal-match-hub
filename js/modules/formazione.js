@@ -221,25 +221,25 @@ async function caricaDatiFormazione() {
   }
 
   if (!matchTrovato) return;
-  partitaCorrenteId = matchTrovato.id;
 
-  // Cerca il sondaggio corrispondente nella tabella partite tramite data_ora
-  let sondaggioId = null;
+  // 1. Cerca il record corrispondente nella tabella 'partite' tramite data_ora
+  let matchPartiteId = null;
   if (matchTrovato.data_ora) {
-    const { data: sondaggio } = await db.from('partite')
+    const { data: recordPartita } = await db.from('partite')
       .select('id')
       .eq('data_ora', matchTrovato.data_ora)
       .maybeSingle();
-    if (sondaggio) sondaggioId = sondaggio.id;
+    if (recordPartita) matchPartiteId = recordPartita.id;
   }
 
-  // Recupera tutte le presenze e filtra verificando sia l'ID calendario che l'ID sondaggio
-  const { data: tuttePresenze } = await db.from('presenze')
-    .select('*')
-    .eq('stato', 'Presente');
+  // 2. IMPORTANTE: Assegniamo a partitaCorrenteId l'ID della tabella 'partite' 
+  // (perché la tabella 'formazioni_partite' ha il vincolo di foreign key su 'partite').
+  // Usiamo matchTrovato.id come fallback se non dovesse esistere la riga in 'partite'.
+  partitaCorrenteId = matchPartiteId || matchTrovato.id;
 
+  // Per le presenze, consideriamo entrambi gli ID possibili (calendario o partite)
   const idsPossibili = [matchTrovato.id];
-  if (sondaggioId) idsPossibili.push(sondaggioId);
+  if (matchPartiteId) idsPossibili.push(matchPartiteId);
 
   const presenze = (tuttePresenze || []).filter(pr => {
     const pid = pr.id_partita || pr.id_sondaggio || pr.partita_id;
