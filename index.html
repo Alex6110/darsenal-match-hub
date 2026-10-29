@@ -659,8 +659,8 @@
       <!-- VISTA 1: TAB SQUADRA -->
       <div id="tab-squadra-view" class="space-y-4">
         <!-- BOX SALDO SQUADRA E GIOCATORI -->
-        <div class="bg-gradient-to-br from-burgundy to-burgundy-dark text-white p-5 rounded-3xl shadow-lg grid grid-cols-2 divide-x divide-white/20 text-center">
-          <div class="space-y-1 pr-2">
+                <div class="bg-gradient-to-br from-burgundy to-burgundy-dark text-white p-5 rounded-3xl shadow-lg grid grid-cols-2 text-center">
+          <div class="space-y-1 pr-2 border-r border-white/20">
             <p class="text-[9px] font-bold uppercase tracking-wider text-white">Cassa Squadra</p>
             <p id="display-saldo-squadra" class="text-2xl font-black">0.00 €</p>
             <p class="text-[9px] opacity-80">Arrotondamenti</p>
@@ -670,26 +670,12 @@
             <p id="display-saldo-giocatori-totale" class="text-2xl font-black">0.00 €</p>
             <p class="text-[9px] opacity-80">Totale debiti/crediti</p>
           </div>
-        </div>
-
-        <!-- TABELLA SALDO GIOCATORI -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="p-4 border-b border-slate-100 flex justify-between items-center">
-            <h3 class="font-black text-xs text-slate-700 uppercase tracking-wider">Saldi Individuali</h3>
-            <span id="num-giocatori-saldo" class="text-[10px] text-slate-400 font-bold">Giocatori</span>
-          </div>
-          <div class="divide-y divide-slate-100 max-h-[50vh] overflow-y-auto" id="lista-saldi-squadra">
-            <!-- Popolato via JS da Supabase -->
+          <div class="col-span-2 space-y-1 mt-4 pt-4 border-t border-white/20">
+            <p class="text-[9px] font-bold uppercase tracking-wider text-white">Totale Complessivo</p>
+            <p id="display-saldo-complessivo" class="text-2xl font-black">0.00 €</p>
+            <p class="text-[9px] opacity-80">Cassa squadra + saldo giocatori</p>
           </div>
         </div>
-
-        <!-- TOTALE CASSA + GIOCATORI -->
-        <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 text-center">
-          <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Totale Complessivo</p>
-          <p id="display-saldo-complessivo" class="text-2xl font-black text-slate-800">0.00 €</p>
-          <p class="text-[9px] text-slate-400">Cassa squadra + saldo giocatori</p>
-        </div>
-      </div>
 
       <!-- VISTA 2: TAB GIOCATORE / PARTITE (SOLO ADMIN) -->
       <div id="tab-giocatore-view" class="hidden space-y-4">

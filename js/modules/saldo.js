@@ -96,7 +96,6 @@ async function caricaDatiCassaSupabase() {
   if (displayComplessivo) {
     const complessivo = totaleCassa + totaleGiocatori;
     displayComplessivo.innerText = `${complessivo >= 0 ? '+' : ''}${complessivo.toFixed(2)} €`;
-    displayComplessivo.className = `text-2xl font-black ${complessivo > 0 ? 'text-emerald-600' : (complessivo < 0 ? 'text-rose-600' : 'text-slate-800')}`;
   }
 
   container.innerHTML = giocatori.map(g => {
