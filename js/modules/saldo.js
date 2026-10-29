@@ -59,13 +59,13 @@ async function caricaDatiCassaSupabase() {
   });
 
   let totaleCassa = 0;
-  (movimenti || []).forEach(m => {
+    (movimenti || []).forEach(m => {
     const imp = parseFloat(m.importo) || 0;
     const nomeKey = (m.nome_giocatore || '').toLowerCase().trim();
-    
-    // Somma solo i soldi dovuti all'arrotondamento / cassa squadra
+
     if (nomeKey === 'cassa squadra' || (m.causale && m.causale.toLowerCase().includes('arrotondamento'))) {
       totaleCassa += imp;
+      return; // non è un giocatore
     }
 
     if (saldiMap[nomeKey] !== undefined) {
@@ -90,6 +90,13 @@ async function caricaDatiCassaSupabase() {
   if (displaySaldoGiocatoriTotale) {
     const formattedTotaleG = totaleGiocatori >= 0 ? `+${totaleGiocatori.toFixed(2)} €` : `${totaleGiocatori.toFixed(2)} €`;
     displaySaldoGiocatoriTotale.innerText = formattedTotaleG;
+  }
+
+  const displayComplessivo = document.getElementById('display-saldo-complessivo');
+  if (displayComplessivo) {
+    const complessivo = totaleCassa + totaleGiocatori;
+    displayComplessivo.innerText = `${complessivo >= 0 ? '+' : ''}${complessivo.toFixed(2)} €`;
+    displayComplessivo.className = `text-2xl font-black ${complessivo > 0 ? 'text-emerald-600' : (complessivo < 0 ? 'text-rose-600' : 'text-slate-800')}`;
   }
 
   container.innerHTML = giocatori.map(g => {
@@ -450,6 +457,16 @@ async function salvaIncassoPartita() {
       });
     }
   });
+
+    // Voce "Cassa squadra": l'extra generato dall'arrotondamento delle quote per eccesso
+  const cassaGenerata = Math.round((parseFloat(document.getElementById('spog-cassa-partita').innerText) || 0) * 100) / 100;
+  if (cassaGenerata > 0) {
+    movimentiDaInserire.push({
+      nome_giocatore: 'Cassa squadra',
+      importo: cassaGenerata,
+      causale: `${causalePartita} (arrotondamento)`
+    });
+  }
 
   if (movimentiDaInserire.length > 0) {
     const { error } = await db.from('movimenti_cassa').insert(movimentiDaInserire);
