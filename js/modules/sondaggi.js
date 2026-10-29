@@ -78,67 +78,63 @@ async function eliminaSondaggio(idPartita) {
   const confermato = await mostraConfirm("Sei sicuro di voler eliminare questo sondaggio?");
   if (!confermato) return;
   
-  const { error } = await db.from('partite').update({ tipo_sondaggio: 'annullato' }).eq('id', idPartita);
+  const { data, error } = await db.from('partite').update({ tipo_sondaggio: 'annullato' }).eq('id', idPartita).select();
   if (error) return mostraAlert("Impossibile eliminare il sondaggio: " + error.message);
+  if (!data || data.length === 0) return mostraAlert("Eliminazione bloccata dal database (permessi RLS su 'partite').");
 
   caricaSondaggi();
 }
 
+let automazioneInCorso = false;
+
 async function gestisciAutomazioniSondaggi() {
-  const adesso = new Date();
+  if (automazioneInCorso) return;
+  automazioneInCorso = true;
+  try {
+    const adesso = new Date();
+    const { data: calendario } = await db
+      .from('calendario_torneo').select('*').order('data_ora', { ascending: true });
+    if (!calendario || calendario.length === 0) return;
 
-  // Recupera tutto il calendario ordinato cronologicamente per la fase attiva
-  const { data: calendario } = await db
-    .from('calendario_torneo')
-    .select('*')
-    .order('data_ora', { ascending: true });
+    for (let i = 0; i < calendario.length; i++) {
+      const partitaCorrente = calendario[i];
+      const dataCorrente = new Date(partitaCorrente.data_ora);
+      if (dataCorrente <= adesso) continue;
 
-  if (!calendario || calendario.length === 0) return;
+      let dataAttivazione;
+      if (i === 0) {
+        dataAttivazione = new Date(dataCorrente);
+        dataAttivazione.setDate(dataAttivazione.getDate() - 4);
+        dataAttivazione.setHours(10, 0, 0, 0);
+      } else {
+        dataAttivazione = new Date(calendario[i - 1].data_ora);
+        dataAttivazione.setDate(dataAttivazione.getDate() + 1);
+        dataAttivazione.setHours(10, 0, 0, 0);
+      }
 
-  for (let i = 0; i < calendario.length; i++) {
-    const partitaCorrente = calendario[i];
-    const dataCorrente = new Date(partitaCorrente.data_ora);
+      if (adesso >= dataAttivazione && adesso < dataCorrente) {
+        const avversario = partitaCorrente.squadra_casa.toLowerCase().includes('darsenal')
+          ? partitaCorrente.squadra_trasferta
+          : partitaCorrente.squadra_casa;
 
-    if (dataCorrente <= adesso) continue;
+        const { data: esistente } = await db.from('partite').select('id')
+          .eq('squadra_avversaria', avversario)
+          .eq('data_ora', partitaCorrente.data_ora);
 
-    let dataAttivazione;
-
-    if (i === 0) {
-      dataAttivazione = new Date(dataCorrente);
-      dataAttivazione.setDate(dataAttivazione.getDate() - 4);
-      dataAttivazione.setHours(10, 0, 0, 0);
-    } else {
-      const partitaPrecedente = calendario[i - 1];
-      const dataPrecedente = new Date(partitaPrecedente.data_ora);
-      
-      dataAttivazione = new Date(dataPrecedente);
-      dataAttivazione.setDate(dataAttivazione.getDate() + 1); // Il giorno dopo
-      dataAttivazione.setHours(10, 0, 0, 0); // Alle 10:00
-    }
-
-    // Se abbiamo superato le 10:00 del giorno dopo l'ultima partita e il match non è iniziato
-    if (adesso >= dataAttivazione && adesso < dataCorrente) {
-      const avversario = partitaCorrente.squadra_casa.toLowerCase().includes('darsenal') 
-        ? partitaCorrente.squadra_trasferta 
-        : partitaCorrente.squadra_casa;
-
-      // Controllo memorizzazione: verifica se esiste già per non ripetere l'inserimento
-      const { data: esistente } = await db
-        .from('partite')
-        .select('id')
-        .eq('squadra_avversaria', avversario)
-        .eq('data_ora', partitaCorrente.data_ora);
-
-      if (!esistente || esistente.length === 0) {
-        await db.from('partite').insert([{
-          squadra_avversaria: avversario,
-          data_ora: partitaCorrente.data_ora,
-          luogo: partitaCorrente.luogo || 'Campo Sportivo',
-          tipo_sondaggio: 'torneo'
-        }]);
-        console.log(`Sondaggio creato automaticamente per la partita contro ${avversario}`);
+        if (!esistente || esistente.length === 0) {
+          const { error } = await db.from('partite').insert([{
+            squadra_avversaria: avversario,
+            data_ora: partitaCorrente.data_ora,
+            luogo: partitaCorrente.luogo || 'Campo Sportivo',
+            tipo_sondaggio: 'torneo'
+          }]);
+          // 23505 = esiste già (l'indice unico ha bloccato il duplicato): va bene così
+          if (error && error.code !== '23505') console.warn('Creazione sondaggio fallita:', error.message);
+        }
       }
     }
+  } finally {
+    automazioneInCorso = false;
   }
 }
 
