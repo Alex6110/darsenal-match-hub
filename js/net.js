@@ -1,16 +1,27 @@
-// js/net.js — rete resiliente per Supabase + registrazione Service Worker
+// js/net.js — rete resiliente per Supabase + dati in cache (stale-while-revalidate) + Service Worker
 // Va caricato PRIMA di supabaseConfig.js
 
 (function () {
   const CACHE_DATI = 'darsenal-dati-v1';
-  const TIMEOUT_LETTURA = 8000;   // ms
+  const TIMEOUT_LETTURA = 8000;    // ms
   const TIMEOUT_SCRITTURA = 20000;
   const TENTATIVI_LETTURA = 3;
-  const inVolo = new Map();       // GET identiche in corso -> una sola richiesta
+  const inVolo = new Map();        // GET identiche in corso -> una sola richiesta
+  const inAggiornamento = new Set();
+  let ultimaScrittura = 0;         // dopo una scrittura, le copie salvate prima non vengono più usate subito
+  let ultimaRicarica = 0;
+  let timerRicarica;
 
   const attendi = ms => new Promise(r => setTimeout(r, ms));
-  const chiaveCache = (url, accept) =>
-    'https://cache.local/' + encodeURIComponent(url) + '__' + encodeURIComponent(accept || '');
+
+  function intestazione(init, nome) {
+    const h = init && init.headers;
+    if (!h) return '';
+    return (h.get ? h.get(nome) : (h[nome] || h[nome.toLowerCase()])) || '';
+  }
+  const chiaveCache = (url, init) =>
+    'https://cache.local/' + encodeURIComponent(url) + '__' +
+    encodeURIComponent(['Accept', 'Range', 'Prefer'].map(n => intestazione(init, n)).join('|'));
 
   function banner(mostra) {
     let el = document.getElementById('banner-offline');
@@ -40,8 +51,20 @@
     }
   }
 
-  async function leggiConFallback(url, init) {
-    const accept = init.headers && (init.headers.get ? init.headers.get('Accept') : init.headers['Accept']);
+  // Salva una copia della risposta con l'ora di salvataggio
+  async function salvaInCache(chiave, copia) {
+    try {
+      const c = await caches.open(CACHE_DATI);
+      const headers = new Headers(copia.headers);
+      headers.set('x-salvato-il', String(Date.now()));
+      await c.put(chiave, new Response(await copia.blob(), {
+        status: copia.status, statusText: copia.statusText, headers
+      }));
+    } catch (e) {}
+  }
+
+  // Rete con timeout e retry; se non risponde, ultima copia salvata
+  async function leggiConFallback(url, init, chiave) {
     let ultimoErrore;
     for (let i = 0; i < TENTATIVI_LETTURA; i++) {
       if (i > 0) await attendi(400 * i);
@@ -50,10 +73,7 @@
         if (res.ok) {
           window.__reteInErrore = false;
           banner(false);
-          try {
-            const c = await caches.open(CACHE_DATI);
-            await c.put(chiaveCache(url, accept), res.clone());
-          } catch (e) {}
+          salvaInCache(chiave, res.clone());
           return res;
         }
         if (res.status < 500) return res;   // 4xx: errore vero, nessun retry
@@ -63,14 +83,69 @@
         if (init.signal && init.signal.aborted) throw e;
       }
     }
-    // Rete non utilizzabile: ultima copia salvata, se esiste
     window.__reteInErrore = true;
     try {
       const c = await caches.open(CACHE_DATI);
-      const salvato = await c.match(chiaveCache(url, accept));
+      const salvato = await c.match(chiave);
       if (salvato) { banner(true); return salvato; }
     } catch (e) {}
     throw ultimoErrore;
+  }
+
+  // Ricarica la tab corrente (se non si sta scrivendo o usando una finestra)
+  function ricaricaTabCorrente() {
+    const tab = localStorage.getItem('darsenal_active_tab') || 'partite';
+    if (tab === 'messaggi' && typeof caricaMessaggi === 'function') caricaMessaggi();
+    else if (typeof caricaDatiPerTab === 'function') caricaDatiPerTab(tab);
+  }
+
+  function programmaRicarica() {
+    clearTimeout(timerRicarica);
+    timerRicarica = setTimeout(() => {
+      if (Date.now() - ultimaRicarica < 5000) return;
+      if (document.visibilityState !== 'visible') return;
+      const el = document.activeElement;
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+      if (document.querySelector('[id*="modal"]:not(.hidden)')) return;
+      ultimaRicarica = Date.now();
+      ricaricaTabCorrente();
+    }, 400);
+  }
+
+  // Aggiorna in background; se i dati sono cambiati ridisegna la pagina
+  function aggiornaInBackground(url, init, chiave, vecchia) {
+    if (inAggiornamento.has(chiave)) return;
+    inAggiornamento.add(chiave);
+    (async () => {
+      try {
+        const res = await leggiConFallback(url, init, chiave);
+        if (!res.ok) return;
+        const [a, b] = await Promise.all([vecchia.text(), res.text()]);
+        if (a !== b) programmaRicarica();
+      } catch (e) {
+      } finally {
+        inAggiornamento.delete(chiave);
+      }
+    })();
+  }
+
+  // Lettura: copia salvata subito (se valida) + aggiornamento in background
+  async function leggi(url, init) {
+    const chiave = chiaveCache(url, init);
+    if (!init.signal) {
+      try {
+        const c = await caches.open(CACHE_DATI);
+        const salvato = await c.match(chiave);
+        if (salvato) {
+          const quando = Number(salvato.headers.get('x-salvato-il')) || 0;
+          if (quando > ultimaScrittura) {
+            aggiornaInBackground(url, init, chiave, salvato.clone());
+            return salvato;
+          }
+        }
+      } catch (e) {}
+    }
+    return leggiConFallback(url, init, chiave);
   }
 
   // fetch da passare a supabase-js
@@ -80,15 +155,14 @@
 
     if (metodo !== 'GET') {
       // Scritture: un solo tentativo (niente duplicati), timeout più lungo
-      return tentaUnaVolta(url, init, TIMEOUT_SCRITTURA).catch(e => {
-        window.__reteInErrore = true;
-        throw e;
-      });
+      ultimaScrittura = Date.now();
+      return tentaUnaVolta(url, init, TIMEOUT_SCRITTURA)
+        .catch(e => { window.__reteInErrore = true; throw e; })
+        .finally(() => { ultimaScrittura = Date.now(); });
     }
-    const accept = init.headers && (init.headers.get ? init.headers.get('Accept') : init.headers['Accept']);
-    const k = url + '|' + (accept || '');
+    const k = url + '|' + intestazione(init, 'Accept') + '|' + intestazione(init, 'Range') + '|' + intestazione(init, 'Prefer');
     if (!init.signal && inVolo.has(k)) return inVolo.get(k).then(r => r.clone());
-    const p = leggiConFallback(url, init);
+    const p = leggi(url, init);
     if (!init.signal) {
       inVolo.set(k, p);
       p.finally(() => inVolo.delete(k)).catch(() => {});
@@ -101,9 +175,7 @@
     if (!window.__reteInErrore || !navigator.onLine) return;
     window.__reteInErrore = false;
     banner(false);
-    const tab = localStorage.getItem('darsenal_active_tab') || 'partite';
-    if (tab === 'messaggi' && typeof caricaMessaggi === 'function') caricaMessaggi();
-    else if (typeof caricaDatiPerTab === 'function') caricaDatiPerTab(tab);
+    ricaricaTabCorrente();
   }
   window.addEventListener('online', riprova);
   window.addEventListener('offline', () => banner(true));
