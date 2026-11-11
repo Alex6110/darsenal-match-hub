@@ -22,23 +22,18 @@ async function caricaPartite() {
     return;
   }
 
-  const { data: calendario, error } = await db
-    .from('calendario_torneo')
-    .select('*')
-    .eq('fase_torneo', window.faseAttivaId)
-    .order('data_ora', { ascending: true });
+  const [{ data: calendario, error }, { data: tuttiEventi }, { data: tuttePresenze }, { data: tuttePartiteSondaggio }] = await Promise.all([
+    db.from('calendario_torneo').select('*').eq('fase_torneo', window.faseAttivaId).order('data_ora', { ascending: true }),
+    db.from('eventi_partita').select('*'),
+    db.from('presenze').select('*').eq('stato', 'Presente'),
+    db.from('partite').select('id, data_ora')
+  ]);
 
   if (error) {
     console.error("Errore caricamento calendario:", error);
     if (prossimoContainer) prossimoContainer.innerHTML = `<div class="text-xs text-rose-500 py-2">Errore nel caricamento.</div>`;
     return;
   }
-
-  const [{ data: tuttiEventi }, { data: tuttePresenze }, { data: tuttePartiteSondaggio }] = await Promise.all([
-    db.from('eventi_partita').select('*'),
-    db.from('presenze').select('*').eq('stato', 'Presente'),
-    db.from('partite').select('id, data_ora')
-  ]);
 
   cacheCalendario = (calendario || []).map(p => {
     const sondaggio = (tuttePartiteSondaggio || []).find(s => s.data_ora === p.data_ora);
