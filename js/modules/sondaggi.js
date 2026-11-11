@@ -165,11 +165,14 @@ async function caricaSondaggi() {
 
   const tuttiSondaggiFuturi = (tuttePartite || []).filter(p => new Date(p.data_ora) >= inizioOggi && p.tipo_sondaggio !== 'annullato');
 
-  const { data: presenzeList } = await db.from('presenze').select('*');
+  const [{ data: presenzeList }, { data: dbGiocatori }, { data: votiCustomList }] = await Promise.all([
+    db.from('presenze').select('*'),
+    db.from('giocatori').select('*'),
+    db.from('voti_sondaggi').select('*')
+  ]);
   const tuttePresenze = presenzeList || [];
 
   let giocatori = GIOCATORI_MOCK;
-  const { data: dbGiocatori } = await db.from('giocatori').select('*');
   if (dbGiocatori && dbGiocatori.length > 0) giocatori = dbGiocatori;
 
   const adesso = new Date();
@@ -182,7 +185,6 @@ async function caricaSondaggi() {
     return !isAmichevoleOcustom;
   });
 
-  const { data: votiCustomList } = await db.from('voti_sondaggi').select('*');
   const tuttiVotiCustom = votiCustomList || [];
 
   aggiornaStatoTabFiltri(tuttiSondaggiFuturi, tuttePresenze, tuttiVotiCustom);
