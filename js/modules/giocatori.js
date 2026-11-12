@@ -133,6 +133,14 @@ function switchTabGiocatori(tab) {
     tab = 'info';
   }
 
+  // Il selettore Info / Assenze serve solo all'admin
+  const soloAdmin = typeof isAdmin !== 'undefined' && isAdmin;
+  document.getElementById('container-tab-giocatori')?.classList.toggle('hidden', !soloAdmin);
+  ['tab-giocatori-info-view', 'tab-giocatori-assenze-view'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.marginTop = soloAdmin ? '' : '0';
+  });
+
   const btnInfo = document.getElementById('btn-tab-giocatori-info');
   const btnAssenze = document.getElementById('btn-tab-giocatori-assenze');
   const viewInfo = document.getElementById('tab-giocatori-info-view');
