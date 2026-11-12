@@ -1,16 +1,15 @@
 // Service Worker: cache per uso offline + Web Push a app chiusa
-const VERSIONE = 'darsenal-shell-v1';   // cambiala quando vuoi forzare un reset della cache
+const VERSIONE = 'darsenal-shell-v2';   // cambiala quando vuoi forzare un reset della cache
 const CACHE_DATI = 'darsenal-dati-v1';   // usata da js/net.js, non va cancellata
 
 const FILE_APP = [
-  './', 'index.html', 'manifest.json', 'logo.png', 'pdf-styles.css',
+  './', 'index.html', 'manifest.json', 'logo.png', 'pdf-styles.css', 'tailwind.css',
   'js/net.js', 'js/data.js', 'js/supabaseConfig.js', 'js/state.js', 'js/app.js',
   'js/modules/ui.js', 'js/modules/giocatori.js', 'js/modules/auth.js', 'js/modules/partite.js',
   'js/modules/classifica.js', 'js/modules/convocazioni.js', 'js/modules/sondaggi.js',
   'js/modules/pdf.js', 'js/modules/notifiche.js', 'js/modules/formazione.js', 'js/modules/saldo.js'
 ];
 const FILE_CDN = [
-  'https://cdn.tailwindcss.com/3.4.17',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js',
   'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
   'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js',
@@ -19,7 +18,7 @@ const FILE_CDN = [
   'https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css',
   'https://fonts.googleapis.com/css2?family=Caladea:wght@400;700&display=swap'
 ];
-const HOST_CDN = ['cdn.tailwindcss.com', 'cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+const HOST_CDN = ['cdn.jsdelivr.net', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
